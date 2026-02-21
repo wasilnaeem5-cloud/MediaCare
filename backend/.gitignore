@@ -1,0 +1,28 @@
+#Node Modules
+node_modules
+
+#Environment variables
+.env
+
+#Logs
+logs
+*.log
+
+#OS generated files
+.DS_Store
+Thumbs.db
+
+#IDE
+.vscode
+.idea
+
+#Build
+dist
+build
+
+#Testing
+coverage
+
+#Other
+*.tmp
+*.temp
