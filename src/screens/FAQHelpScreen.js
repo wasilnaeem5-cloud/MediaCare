@@ -1,11 +1,9 @@
 import { ArrowLeft, ChevronDown, ChevronUp, Mail, MessageSquare, Phone } from 'lucide-react-native';
 import { useState } from 'react';
-import { LayoutAnimation, Platform, SafeAreaView, ScrollView, StyleSheet, Text, TouchableOpacity, UIManager, View } from 'react-native';
+import { LayoutAnimation, SafeAreaView, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { theme } from '../utils/theme';
 
-if (Platform.OS === 'android' && UIManager.setLayoutAnimationEnabledExperimental) {
-    UIManager.setLayoutAnimationEnabledExperimental(true);
-}
+// UIManager.setLayoutAnimationEnabledExperimental is a no-op in the New Architecture
 
 const FAQItem = ({ question, answer }) => {
     const [expanded, setExpanded] = useState(false);

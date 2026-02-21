@@ -1,9 +1,11 @@
 import { ArrowLeft, Lock, Mail, Phone, User } from 'lucide-react-native';
 import { useState } from 'react';
-import { Alert, KeyboardAvoidingView, Platform, SafeAreaView, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { Alert, KeyboardAvoidingView, Platform, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import CustomButton from '../components/CustomButton';
 import CustomInput from '../components/CustomInput';
-import { storage } from '../utils/storage';
+import api from '../services/api';
+import { useAuth } from '../utils/AuthContext';
 import { theme } from '../utils/theme';
 
 const SignUpScreen = ({ navigation }) => {
@@ -15,9 +17,10 @@ const SignUpScreen = ({ navigation }) => {
         confirmPassword: '',
     });
     const [loading, setLoading] = useState(false);
+    const { login } = useAuth();
 
     const handleChange = (name, value) => {
-        setFormData(prev => ({ ...prev, [name]: value }));
+        setFormData((prev) => ({ ...prev, [name]: value }));
     };
 
     const handleSignUp = async () => {
@@ -34,25 +37,31 @@ const SignUpScreen = ({ navigation }) => {
         }
 
         setLoading(true);
+        console.log('[SignUp] Attempting registration for:', email);
+
         try {
-            // Mock API call
-            // await api.post('/auth/signup', formData);
+            const response = await api.post('/auth/signup', {
+                name: name.trim(),
+                email: email.trim().toLowerCase(),
+                phone: phone.trim(),
+                password
+            });
 
-            setTimeout(async () => {
-                const mockToken = 'mock-jwt-token';
-                const mockUser = { id: '1', name: name, email: email, phone: phone };
+            const { token, ...userData } = response.data;
 
-                await storage.saveToken(mockToken);
-                await storage.saveUser(mockUser);
-
-                setLoading(false);
-                Alert.alert('Success', 'Account created successfully!', [
-                    { text: 'OK', onPress: () => navigation.replace('Main') }
-                ]);
-            }, 1500);
+            if (token) {
+                console.log('[SignUp] Success, account created and logged in');
+                await login(token, userData);
+                Alert.alert('Success', 'Account created successfully!');
+            } else {
+                throw new Error('No token received from server');
+            }
         } catch (error) {
+            console.error('[SignUp Error]', error);
+            const message = error.response?.data?.message || 'Registration failed. Please try again.';
+            Alert.alert('Registration Failed', message);
+        } finally {
             setLoading(false);
-            Alert.alert('Registration Failed', error.response?.data?.message || 'Something went wrong');
         }
     };
 

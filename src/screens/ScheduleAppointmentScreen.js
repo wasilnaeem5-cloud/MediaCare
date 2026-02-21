@@ -1,8 +1,10 @@
 import { ArrowLeft, User } from 'lucide-react-native';
 import { useState } from 'react';
-import { Alert, SafeAreaView, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { Alert, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { Calendar as CalendarPicker } from 'react-native-calendars';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import CustomButton from '../components/CustomButton';
+import api from '../services/api';
 import { theme } from '../utils/theme';
 
 const doctors = [
@@ -21,24 +23,39 @@ const ScheduleAppointmentScreen = ({ navigation }) => {
     const [selectedTime, setSelectedTime] = useState('');
     const [loading, setLoading] = useState(false);
 
-    const handleBook = () => {
+    const handleBook = async () => {
         if (!selectedDate || !selectedDoctor || !selectedTime) {
             Alert.alert('Error', 'Please select a date, doctor, and time slot.');
             return;
         }
 
         setLoading(true);
-        // Mock API call
-        setTimeout(() => {
-            setLoading(false);
-            navigation.navigate('Confirmation', {
-                appointment: {
-                    doctor: selectedDoctor,
-                    date: selectedDate,
-                    time: selectedTime
-                }
+        console.log('[Booking] Attempting to book appointment:', {
+            doctorName: selectedDoctor.name,
+            date: selectedDate,
+            time: selectedTime
+        });
+
+        try {
+            const response = await api.post('/appointments/book', {
+                doctorName: selectedDoctor.name,
+                date: selectedDate,
+                time: selectedTime
             });
-        }, 1500);
+
+            if (response.data) {
+                console.log('[Booking] Success:', response.data);
+                navigation.navigate('Confirmation', {
+                    appointment: response.data
+                });
+            }
+        } catch (error) {
+            console.error('[Booking Error]', error);
+            const message = error.response?.data?.message || 'Failed to book appointment. This slot might be taken.';
+            Alert.alert('Booking Failed', message);
+        } finally {
+            setLoading(false);
+        }
     };
 
     return (
@@ -81,6 +98,7 @@ const ScheduleAppointmentScreen = ({ navigation }) => {
                             markedDates={{
                                 [selectedDate]: { selected: true, selectedColor: theme.colors.primary }
                             }}
+                            minDate={new Date().toISOString().split('T')[0]} // Cannot book in the past
                             theme={{
                                 selectedDayBackgroundColor: theme.colors.primary,
                                 todayTextColor: theme.colors.primary,

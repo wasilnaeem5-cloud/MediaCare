@@ -1,8 +1,7 @@
 import { NavigationContainer } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
-import { useEffect, useState } from 'react';
 import { ActivityIndicator, View } from 'react-native';
-import { storage } from '../utils/storage';
+import { useAuth } from '../utils/AuthContext';
 import { theme } from '../utils/theme';
 
 import AppointmentConfirmationScreen from '../screens/AppointmentConfirmationScreen';
@@ -14,24 +13,7 @@ import MainNavigator from './MainNavigator';
 const Stack = createNativeStackNavigator();
 
 const RootNavigator = () => {
-    const [isLoading, setIsLoading] = useState(true);
-    const [userToken, setUserToken] = useState(null);
-
-    useEffect(() => {
-        // Check for token on mount
-        const bootstrapAsync = async () => {
-            let token;
-            try {
-                token = await storage.getToken();
-            } catch (e) {
-                console.error('Failed to load token', e);
-            }
-            setUserToken(token);
-            setIsLoading(false);
-        };
-
-        bootstrapAsync();
-    }, []);
+    const { userToken, isLoading } = useAuth();
 
     if (isLoading) {
         return (
@@ -45,14 +27,11 @@ const RootNavigator = () => {
         <NavigationContainer>
             <Stack.Navigator screenOptions={{ headerShown: false }}>
                 {userToken == null ? (
-                    // No token found, user isn't signed in
                     <Stack.Screen name="Auth" component={AuthNavigator} />
                 ) : (
-                    // User is signed in
                     <Stack.Screen name="Main" component={MainNavigator} />
                 )}
 
-                {/* Common screens that can be accessed from multiple places or need to be outside tabs */}
                 <Stack.Screen name="ScheduleAppointment" component={ScheduleAppointmentScreen} />
                 <Stack.Screen name="Confirmation" component={AppointmentConfirmationScreen} />
                 <Stack.Screen name="FAQ" component={FAQHelpScreen} />

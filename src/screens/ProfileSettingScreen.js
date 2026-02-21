@@ -1,37 +1,47 @@
 import { Camera, ChevronRight, HelpCircle, LogOut, Mail, MapPin, Phone, Settings, User } from 'lucide-react-native';
-import { useEffect, useState } from 'react';
-import { Alert, SafeAreaView, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { useState } from 'react';
+import { Alert, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import CustomButton from '../components/CustomButton';
 import CustomInput from '../components/CustomInput';
-import { storage } from '../utils/storage';
+import { useAuth } from '../utils/AuthContext';
 import { theme } from '../utils/theme';
 
 const ProfileSettingScreen = ({ navigation }) => {
+    const { user: authUser, logout, updateUser } = useAuth();
     const [user, setUser] = useState({
-        name: 'John Doe',
-        email: 'john.doe@example.com',
-        phone: '+1 234 567 890',
-        address: '123 Health St, Medical City',
+        name: authUser?.name || '',
+        email: authUser?.email || '',
+        phone: authUser?.phone || '',
+        address: authUser?.address || 'Not set',
     });
     const [loading, setLoading] = useState(false);
 
-    useEffect(() => {
-        loadUser();
-    }, []);
-
-    const loadUser = async () => {
-        const userData = await storage.getUser();
-        if (userData) {
-            setUser(prev => ({ ...prev, ...userData }));
+    const handleSave = async () => {
+        if (!user.name || !user.email) {
+            Alert.alert('Error', 'Name and Email are required');
+            return;
         }
-    };
 
-    const handleSave = () => {
         setLoading(true);
-        setTimeout(() => {
-            setLoading(false);
+        console.log('[Profile] Saving changes for:', user.name);
+
+        try {
+            // Simulate API call for profile update
+            // await api.put('/auth/profile', user);
+
+            await new Promise(resolve => setTimeout(resolve, 1000));
+
+            // Update global state
+            await updateUser(user);
+
             Alert.alert('Success', 'Profile updated successfully!');
-        }, 1000);
+        } catch (error) {
+            console.error('[Profile Update Error]', error);
+            Alert.alert('Error', 'Failed to update profile');
+        } finally {
+            setLoading(false);
+        }
     };
 
     const handleLogout = async () => {
@@ -40,11 +50,7 @@ const ProfileSettingScreen = ({ navigation }) => {
             {
                 text: 'Logout',
                 onPress: async () => {
-                    await storage.clearAll();
-                    navigation.reset({
-                        index: 0,
-                        routes: [{ name: 'Auth' }],
-                    });
+                    await logout();
                 }
             }
         ]);
@@ -74,8 +80,8 @@ const ProfileSettingScreen = ({ navigation }) => {
                             <Camera size={20} color={theme.colors.white} />
                         </TouchableOpacity>
                     </View>
-                    <Text style={styles.userName}>{user.name}</Text>
-                    <Text style={styles.userEmail}>{user.email}</Text>
+                    <Text style={styles.userName}>{authUser?.name || 'User'}</Text>
+                    <Text style={styles.userEmail}>{authUser?.email || 'email@example.com'}</Text>
                 </View>
 
                 <View style={styles.section}>
@@ -92,6 +98,7 @@ const ProfileSettingScreen = ({ navigation }) => {
                         onChangeText={(val) => setUser({ ...user, email: val })}
                         icon={Mail}
                         keyboardType="email-address"
+                        editable={false} // Usually email shouldn't be edited easily
                     />
                     <CustomInput
                         label="Phone Number"

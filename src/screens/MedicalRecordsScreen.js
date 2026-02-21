@@ -1,6 +1,7 @@
 import { Activity, Beaker, Download, FileText, Pill, Plus, Search } from 'lucide-react-native';
 import { useState } from 'react';
-import { FlatList, SafeAreaView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { FlatList, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import Card from '../components/Card';
 import Header from '../components/Header';
 import { theme } from '../utils/theme';

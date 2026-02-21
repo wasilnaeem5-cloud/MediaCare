@@ -1,5 +1,6 @@
 import { ArrowRight, Calendar, CheckCircle, Clock, User } from 'lucide-react-native';
-import { SafeAreaView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import CustomButton from '../components/CustomButton';
 import { theme } from '../utils/theme';
 
@@ -27,7 +28,7 @@ const AppointmentConfirmationScreen = ({ route, navigation }) => {
                         </View>
                         <View>
                             <Text style={styles.label}>Doctor</Text>
-                            <Text style={styles.value}>{appointment?.doctor?.name || 'Dr. James Smith'}</Text>
+                            <Text style={styles.value}>{appointment?.doctorName || 'Dr. James Smith'}</Text>
                         </View>
                     </View>
 
@@ -62,12 +63,12 @@ const AppointmentConfirmationScreen = ({ route, navigation }) => {
             <View style={styles.footer}>
                 <CustomButton
                     title="Back to Dashboard"
-                    onPress={() => navigation.navigate('Dashboard')}
+                    onPress={() => navigation.navigate('Main', { screen: 'Home' })}
                     style={styles.button}
                 />
                 <TouchableOpacity
                     style={styles.viewAptBtn}
-                    onPress={() => navigation.navigate('Appointments')}
+                    onPress={() => navigation.navigate('Main', { screen: 'Appointments' })}
                 >
                     <Text style={styles.viewAptText}>View All Appointments</Text>
                     <ArrowRight size={18} color={theme.colors.primary} />

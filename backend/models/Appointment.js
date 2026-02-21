@@ -21,7 +21,17 @@ const appointmentSchema = new mongoose.Schema(
         },
         status: {
             type: String,
+            enum: ['Booked', 'Cancelled', 'Completed', 'Rescheduled'],
             default: 'Booked',
+        },
+        cancelledAt: {
+            type: Date,
+        },
+        rescheduledFrom: {
+            type: String, // Previous date
+        },
+        rescheduledTimeFrom: {
+            type: String, // Previous time
         },
     },
     {

@@ -1,6 +1,7 @@
 import { LinearGradient } from 'expo-linear-gradient';
 import { HeartPulse } from 'lucide-react-native';
-import { SafeAreaView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import CustomButton from '../components/CustomButton';
 import { theme } from '../utils/theme';
 

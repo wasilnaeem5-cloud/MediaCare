@@ -1,3 +1,4 @@
+import { useFocusEffect } from '@react-navigation/native';
 import {
     Activity,
     Calendar,
@@ -9,30 +10,50 @@ import {
     TrendingUp,
     User
 } from 'lucide-react-native';
-import { useEffect, useState } from 'react';
-import { RefreshControl, SafeAreaView, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { useCallback, useState } from 'react';
+import { ActivityIndicator, RefreshControl, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import Card from '../components/Card';
 import Header from '../components/Header';
-import { storage } from '../utils/storage';
+import api from '../services/api';
+import { useAuth } from '../utils/AuthContext';
 import { theme } from '../utils/theme';
 
 const DashboardScreen = ({ navigation }) => {
-    const [user, setUser] = useState(null);
+    const { user } = useAuth();
     const [refreshing, setRefreshing] = useState(false);
+    const [upcomingAppointment, setUpcomingAppointment] = useState(null);
+    const [loading, setLoading] = useState(true);
 
-    useEffect(() => {
-        loadUser();
-    }, []);
+    const fetchDashboardData = async () => {
+        try {
+            console.log('[Dashboard] Fetching upcoming appointments...');
+            const response = await api.get('/appointments/upcoming');
 
-    const loadUser = async () => {
-        const userData = await storage.getUser();
-        setUser(userData);
+            // Assuming the API returns an array of appointments sorted by date
+            if (response.data && response.data.length > 0) {
+                setUpcomingAppointment(response.data[0]);
+            } else {
+                setUpcomingAppointment(null);
+            }
+        } catch (error) {
+            console.error('[Dashboard Error] Failed to fetch data', error);
+        } finally {
+            setLoading(false);
+            setRefreshing(false);
+        }
     };
+
+    // Refresh data whenever the screen comes into focus
+    useFocusEffect(
+        useCallback(() => {
+            fetchDashboardData();
+        }, [])
+    );
 
     const onRefresh = () => {
         setRefreshing(true);
-        // Reload data logic...
-        setTimeout(() => setRefreshing(false), 1500);
+        fetchDashboardData();
     };
 
     const QuickCard = ({ title, icon: Icon, color, onPress }) => (
@@ -48,6 +69,71 @@ const DashboardScreen = ({ navigation }) => {
         </TouchableOpacity>
     );
 
+    const renderUpcomingApt = () => {
+        if (loading && !refreshing) {
+            return (
+                <View style={styles.loaderContainer}>
+                    <ActivityIndicator color={theme.colors.primary} />
+                </View>
+            );
+        }
+
+        if (!upcomingAppointment) {
+            return (
+                <Card style={styles.emptyAptCard}>
+                    <Text style={styles.emptyAptText}>No upcoming appointments</Text>
+                    <TouchableOpacity
+                        style={styles.bookNowBtn}
+                        onPress={() => navigation.navigate('ScheduleAppointment')}
+                    >
+                        <Text style={styles.bookNowText}>Book Now</Text>
+                    </TouchableOpacity>
+                </Card>
+            );
+        }
+
+        const aptDate = new Date(upcomingAppointment.date);
+        const dateString = aptDate.toLocaleDateString('en-US', {
+            weekday: 'long',
+            month: 'short',
+            day: 'numeric'
+        });
+
+        return (
+            <Card style={styles.appointmentCard}>
+                <View style={styles.aptHeader}>
+                    <View style={styles.docInfo}>
+                        <View style={styles.docAvatar}>
+                            <Text style={styles.docInitial}>
+                                {upcomingAppointment.doctorName.charAt(0)}
+                            </Text>
+                        </View>
+                        <View>
+                            <Text style={styles.docName}>{upcomingAppointment.doctorName}</Text>
+                            <Text style={styles.docSpec}>Medical Specialist</Text>
+                        </View>
+                    </View>
+                    <TouchableOpacity
+                        style={styles.aptDetailBtn}
+                        onPress={() => navigation.navigate('Appointments')}
+                    >
+                        <ChevronRight size={20} color={theme.colors.textSecondary} />
+                    </TouchableOpacity>
+                </View>
+                <View style={styles.aptFooter}>
+                    <View style={styles.aptMeta}>
+                        <Calendar size={16} color={theme.colors.primary} />
+                        <Text style={styles.aptMetaText}>{upcomingAppointment.date}</Text>
+                    </View>
+                    <View style={styles.aptMeta}>
+                        <Clock size={16} color={theme.colors.primary} />
+                        <Text style={styles.aptMetaText}>{upcomingAppointment.time}</Text>
+                    </View>
+                </View>
+            </Card>
+        );
+    };
+
     return (
         <SafeAreaView style={styles.container}>
             <Header title="MediCare" onProfilePress={() => navigation.navigate('Profile')} />
@@ -57,7 +143,7 @@ const DashboardScreen = ({ navigation }) => {
                 refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
             >
                 <View style={styles.welcomeSection}>
-                    <Text style={styles.greeting}>Hello, {user?.name || 'User'}! 👋</Text>
+                    <Text style={styles.greeting}>Hello, {user?.name || 'User'}! </Text>
                     <Text style={styles.subtitle}>How are you feeling today?</Text>
                 </View>
 
@@ -96,32 +182,7 @@ const DashboardScreen = ({ navigation }) => {
                         </TouchableOpacity>
                     </View>
 
-                    <Card style={styles.appointmentCard}>
-                        <View style={styles.aptHeader}>
-                            <View style={styles.docInfo}>
-                                <View style={styles.docAvatar}>
-                                    <Text style={styles.docInitial}>JS</Text>
-                                </View>
-                                <View>
-                                    <Text style={styles.docName}>Dr. James Smith</Text>
-                                    <Text style={styles.docSpec}>Cardiologist</Text>
-                                </View>
-                            </View>
-                            <TouchableOpacity style={styles.aptDetailBtn}>
-                                <ChevronRight size={20} color={theme.colors.textSecondary} />
-                            </TouchableOpacity>
-                        </View>
-                        <View style={styles.aptFooter}>
-                            <View style={styles.aptMeta}>
-                                <Calendar size={16} color={theme.colors.primary} />
-                                <Text style={styles.aptMetaText}>Monday, Oct 24</Text>
-                            </View>
-                            <View style={styles.aptMeta}>
-                                <Clock size={16} color={theme.colors.primary} />
-                                <Text style={styles.aptMetaText}>10:30 AM</Text>
-                            </View>
-                        </View>
-                    </Card>
+                    {renderUpcomingApt()}
                 </View>
 
                 <View style={styles.section}>
@@ -229,6 +290,30 @@ const styles = StyleSheet.create({
     appointmentCard: {
         padding: theme.spacing.md,
     },
+    emptyAptCard: {
+        padding: theme.spacing.xl,
+        alignItems: 'center',
+        justifyContent: 'center',
+        borderStyle: 'dashed',
+        borderWidth: 1,
+        borderColor: theme.colors.border,
+        backgroundColor: 'rgba(0,0,0,0.02)',
+    },
+    emptyAptText: {
+        color: theme.colors.textSecondary,
+        fontSize: 14,
+        marginBottom: theme.spacing.md,
+    },
+    bookNowBtn: {
+        backgroundColor: theme.colors.primary,
+        paddingHorizontal: theme.spacing.lg,
+        paddingVertical: theme.spacing.sm,
+        borderRadius: theme.borderRadius.sm,
+    },
+    bookNowText: {
+        color: theme.colors.white,
+        fontWeight: '700',
+    },
     aptHeader: {
         flexDirection: 'row',
         justifyContent: 'space-between',
@@ -278,6 +363,11 @@ const styles = StyleSheet.create({
         color: theme.colors.text,
         marginLeft: theme.spacing.xs,
         fontWeight: '500',
+    },
+    loaderContainer: {
+        height: 100,
+        justifyContent: 'center',
+        alignItems: 'center',
     },
     insightsRow: {
         flexDirection: 'row',

@@ -1,15 +1,18 @@
 import { ArrowLeft, Lock, Mail } from 'lucide-react-native';
 import { useState } from 'react';
-import { Alert, KeyboardAvoidingView, Platform, SafeAreaView, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { Alert, KeyboardAvoidingView, Platform, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import CustomButton from '../components/CustomButton';
 import CustomInput from '../components/CustomInput';
-import { storage } from '../utils/storage';
+import api from '../services/api';
+import { useAuth } from '../utils/AuthContext';
 import { theme } from '../utils/theme';
 
 const LoginScreen = ({ navigation }) => {
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
     const [loading, setLoading] = useState(false);
+    const { login } = useAuth();
 
     const handleLogin = async () => {
         if (!email || !password) {
@@ -18,25 +21,29 @@ const LoginScreen = ({ navigation }) => {
         }
 
         setLoading(true);
+        console.log('[Login] Attempting login for:', email);
+
         try {
-            // Mock API call
-            // const response = await api.post('/auth/login', { email, password });
-            // const { token, user } = response.data;
+            const response = await api.post('/auth/login', {
+                email: email.trim().toLowerCase(),
+                password
+            });
 
-            // Simulating success for now
-            setTimeout(async () => {
-                const mockToken = 'mock-jwt-token';
-                const mockUser = { id: '1', name: 'John Doe', email: email };
+            const { token, ...userData } = response.data;
 
-                await storage.saveToken(mockToken);
-                await storage.saveUser(mockUser);
-
-                setLoading(false);
-                navigation.replace('Main');
-            }, 1500);
+            if (token) {
+                console.log('[Login] Success, received token');
+                await login(token, userData);
+                // RootNavigator will automatically transition to 'Main'
+            } else {
+                throw new Error('No token received from server');
+            }
         } catch (error) {
+            console.error('[Login Error]', error);
+            const message = error.response?.data?.message || 'Invalid email or password';
+            Alert.alert('Login Failed', message);
+        } finally {
             setLoading(false);
-            Alert.alert('Login Failed', error.response?.data?.message || 'Something went wrong');
         }
     };
 
