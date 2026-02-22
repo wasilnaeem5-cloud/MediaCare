@@ -63,7 +63,7 @@ const AppointmentConfirmationScreen = ({ route, navigation }) => {
             <View style={styles.footer}>
                 <CustomButton
                     title="Back to Dashboard"
-                    onPress={() => navigation.navigate('Main', { screen: 'Home' })}
+                    onPress={() => navigation.navigate('Main')}
                     style={styles.button}
                 />
                 <TouchableOpacity

@@ -1,119 +1,324 @@
+import * as Haptics from 'expo-haptics';
 import { LinearGradient } from 'expo-linear-gradient';
-import { HeartPulse } from 'lucide-react-native';
-import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { ArrowRight, Calendar, FileText, Heart, ShieldCheck } from 'lucide-react-native';
+import { useEffect } from 'react';
+import { Dimensions, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import Animated, {
+    Easing,
+    useAnimatedStyle,
+    useSharedValue,
+    withDelay,
+    withRepeat,
+    withSequence,
+    withSpring,
+    withTiming
+} from 'react-native-reanimated';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import CustomButton from '../components/CustomButton';
 import { theme } from '../utils/theme';
 
-const WelcomeScreen = ({ navigation }) => {
+const { width, height } = Dimensions.get('window');
+
+const FeatureItem = ({ icon: Icon, title, delay }) => {
+    const opacity = useSharedValue(0);
+    const translateY = useSharedValue(20);
+
+    useEffect(() => {
+        opacity.value = withDelay(delay, withTiming(1, { duration: 800 }));
+        translateY.value = withDelay(delay, withSpring(0));
+    }, []);
+
+    const animatedStyle = useAnimatedStyle(() => ({
+        opacity: opacity.value,
+        transform: [{ translateY: translateY.value }],
+    }));
+
     return (
-        <SafeAreaView style={styles.container}>
+        <Animated.View style={[styles.featureItem, animatedStyle]}>
+            <View style={styles.featureIconContainer}>
+                <Icon size={20} color={theme.colors.primary} />
+            </View>
+            <Text style={styles.featureText}>{title}</Text>
+        </Animated.View>
+    );
+};
+
+const FloatingBlob = ({ color, size, top, left, duration, delay }) => {
+    const tx = useSharedValue(0);
+    const ty = useSharedValue(0);
+
+    useEffect(() => {
+        tx.value = withDelay(delay, withRepeat(withTiming(30, { duration, easing: Easing.inOut(Easing.sin) }), -1, true));
+        ty.value = withDelay(delay, withRepeat(withTiming(40, { duration: duration * 1.2, easing: Easing.inOut(Easing.sin) }), -1, true));
+    }, []);
+
+    const style = useAnimatedStyle(() => ({
+        transform: [
+            { translateX: tx.value },
+            { translateY: ty.value }
+        ]
+    }));
+
+    return (
+        <Animated.View style={[
+            styles.blob,
+            { backgroundColor: color, width: size, height: size, borderRadius: size / 2, top, left },
+            style
+        ]} />
+    );
+};
+
+const WelcomeScreen = ({ navigation }) => {
+    // Animation Shared Values
+    const logoScale = useSharedValue(0.8);
+    const logoOpacity = useSharedValue(0);
+    const textOpacity = useSharedValue(0);
+    const textTranslateY = useSharedValue(30);
+    const pulseScale = useSharedValue(1);
+    const buttonScale = useSharedValue(1);
+
+    useEffect(() => {
+        // Entrance Animations
+        logoScale.value = withSpring(1);
+        logoOpacity.value = withTiming(1, { duration: 1000 });
+
+        textOpacity.value = withDelay(400, withTiming(1, { duration: 800 }));
+        textTranslateY.value = withDelay(400, withSpring(0));
+
+        // Pulsing Heartbeat (infinite)
+        pulseScale.value = withRepeat(
+            withSequence(
+                withTiming(1.1, { duration: 100, easing: Easing.out(Easing.quad) }),
+                withTiming(1, { duration: 100 }),
+                withTiming(1.15, { duration: 100 }),
+                withTiming(1, { duration: 600 })
+            ),
+            -1,
+            false
+        );
+    }, []);
+
+    const logoAnimatedStyle = useAnimatedStyle(() => ({
+        opacity: logoOpacity.value,
+        transform: [{ scale: logoScale.value }]
+    }));
+
+    const textAnimatedStyle = useAnimatedStyle(() => ({
+        opacity: textOpacity.value,
+        transform: [{ translateY: textTranslateY.value }]
+    }));
+
+    const heartPulseStyle = useAnimatedStyle(() => ({
+        transform: [{ scale: pulseScale.value }]
+    }));
+
+    const buttonAnimatedStyle = useAnimatedStyle(() => ({
+        transform: [{ scale: buttonScale.value }]
+    }));
+
+    const handleGetStarted = () => {
+        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+        buttonScale.value = withSequence(
+            withTiming(0.95, { duration: 100 }),
+            withTiming(1, { duration: 100 })
+        );
+        setTimeout(() => {
+            navigation.navigate('Login');
+        }, 200);
+    };
+
+    return (
+        <View style={styles.container}>
+            {/* Animated Background Gradients */}
             <LinearGradient
-                colors={[theme.colors.softBlue, theme.colors.background]}
-                style={styles.gradient}
-            >
-                <View style={styles.content}>
-                    <View style={styles.logoContainer}>
+                colors={['#EEF2FF', '#E0E7FF', '#C7D2FE']}
+                style={StyleSheet.absoluteFill}
+            />
+
+            {/* Floating Decorative Blobs */}
+            <FloatingBlob color="rgba(94, 96, 206, 0.1)" size={200} top={-50} left={-50} duration={4000} delay={0} />
+            <FloatingBlob color="rgba(72, 191, 227, 0.15)" size={150} top={height * 0.4} left={width - 100} duration={5000} delay={500} />
+            <FloatingBlob color="rgba(105, 48, 195, 0.1)" size={180} top={height - 100} left={-20} duration={6000} delay={1000} />
+
+            <SafeAreaView style={styles.safeArea}>
+                <View style={styles.topContent}>
+                    <Animated.View style={[styles.logoWrapper, logoAnimatedStyle]}>
                         <View style={styles.iconCircle}>
-                            <HeartPulse size={80} color={theme.colors.primary} />
+                            <Animated.View style={heartPulseStyle}>
+                                <Heart size={64} fill={theme.colors.primary} color={theme.colors.primary} />
+                            </Animated.View>
                         </View>
+                    </Animated.View>
+
+                    <Animated.View style={[styles.textWrapper, textAnimatedStyle]}>
                         <Text style={styles.title}>MediCare</Text>
-                        <Text style={styles.subtitle}>Your Health, Our Priority</Text>
-                    </View>
+                        <Text style={styles.subtitle}>Smart Healthcare, Better Life</Text>
+                    </Animated.View>
 
-                    <View style={styles.footer}>
-                        <Text style={styles.description}>
-                            The best way to manage your medical appointments and records in one place.
-                        </Text>
-
-                        <CustomButton
-                            title="Get Started"
-                            onPress={() => navigation.navigate('Login')}
-                            style={styles.button}
-                        />
-
-                        <TouchableOpacity
-                            onPress={() => navigation.navigate('SignUp')}
-                            style={styles.linkButton}
-                        >
-                            <Text style={styles.linkText}>
-                                Don't have an account? <Text style={styles.linkHighlight}>Sign Up</Text>
-                            </Text>
-                        </TouchableOpacity>
+                    <View style={styles.featuresContainer}>
+                        <FeatureItem icon={Calendar} title="Easy Booking" delay={800} />
+                        <FeatureItem icon={FileText} title="Digital Records" delay={1000} />
+                        <FeatureItem icon={ShieldCheck} title="Secure & Private" delay={1200} />
                     </View>
                 </View>
-            </LinearGradient>
-        </SafeAreaView>
+
+                <View style={styles.bottomContent}>
+                    <Text style={styles.description}>
+                        Experience the next generation of healthcare management. All your medical needs in one smart platform.
+                    </Text>
+
+                    <Animated.View style={[styles.buttonWrapper, buttonAnimatedStyle]}>
+                        <TouchableOpacity
+                            onPress={handleGetStarted}
+                            activeOpacity={0.9}
+                            style={styles.mainButton}
+                        >
+                            <LinearGradient
+                                colors={[theme.colors.primary, theme.colors.accent]}
+                                start={{ x: 0, y: 0 }}
+                                end={{ x: 1, y: 0 }}
+                                style={styles.gradientButton}
+                            >
+                                <Text style={styles.buttonText}>Get Started</Text>
+                                <View style={styles.arrowIcon}>
+                                    <ArrowRight size={20} color={theme.colors.white} />
+                                </View>
+                            </LinearGradient>
+                        </TouchableOpacity>
+                    </Animated.View>
+
+                    <TouchableOpacity
+                        onPress={() => navigation.navigate('SignUp')}
+                        style={styles.secondaryButton}
+                    >
+                        <Text style={styles.secondaryButtonText}>
+                            Don't have an account? <Text style={styles.signUpHighlight}>Sign Up</Text>
+                        </Text>
+                    </TouchableOpacity>
+                </View>
+            </SafeAreaView>
+        </View>
     );
 };
 
 const styles = StyleSheet.create({
     container: {
         flex: 1,
-        backgroundColor: theme.colors.background,
     },
-    gradient: {
+    blob: {
+        position: 'absolute',
+    },
+    safeArea: {
         flex: 1,
     },
-    content: {
+    topContent: {
         flex: 1,
-        padding: theme.spacing.xl,
-        justifyContent: 'space-between',
         alignItems: 'center',
+        paddingTop: height * 0.08,
     },
-    logoContainer: {
-        flex: 1,
-        justifyContent: 'center',
-        alignItems: 'center',
+    logoWrapper: {
+        marginBottom: theme.spacing.lg,
     },
     iconCircle: {
-        width: 160,
-        height: 160,
-        borderRadius: 80,
+        width: 140,
+        height: 140,
+        borderRadius: 70,
         backgroundColor: theme.colors.white,
         justifyContent: 'center',
         alignItems: 'center',
-        marginBottom: theme.spacing.lg,
         ...theme.shadows.medium,
     },
-    title: {
-        fontSize: 42,
-        fontWeight: '900',
-        color: theme.colors.primary,
-        letterSpacing: 1,
-    },
-    subtitle: {
-        fontSize: 18,
-        color: theme.colors.textSecondary,
-        marginTop: theme.spacing.xs,
-        fontWeight: '500',
-    },
-    footer: {
-        width: '100%',
+    textWrapper: {
         alignItems: 'center',
         marginBottom: theme.spacing.xl,
     },
-    description: {
-        fontSize: 16,
-        color: theme.colors.textSecondary,
-        textAlign: 'center',
-        marginBottom: theme.spacing.xl,
-        paddingHorizontal: theme.spacing.md,
-        lineHeight: 24,
+    title: {
+        fontSize: 48,
+        fontWeight: '900',
+        color: theme.colors.text,
+        letterSpacing: -1,
     },
-    button: {
-        height: 56,
+    subtitle: {
+        fontSize: 18,
+        fontWeight: '600',
+        color: theme.colors.primary,
+        marginTop: 4,
     },
-    linkButton: {
+    featuresContainer: {
+        flexDirection: 'row',
+        justifyContent: 'center',
+        width: '100%',
+        paddingHorizontal: theme.spacing.lg,
         marginTop: theme.spacing.lg,
     },
-    linkText: {
+    featureItem: {
+        alignItems: 'center',
+        width: width * 0.28,
+        marginHorizontal: theme.spacing.xs,
+    },
+    featureIconContainer: {
+        width: 48,
+        height: 48,
+        borderRadius: 16,
+        backgroundColor: 'rgba(94, 96, 206, 0.12)',
+        justifyContent: 'center',
+        alignItems: 'center',
+        marginBottom: theme.spacing.sm,
+    },
+    featureText: {
+        fontSize: 12,
+        fontWeight: '700',
+        color: theme.colors.text,
+        textAlign: 'center',
+    },
+    bottomContent: {
+        paddingHorizontal: theme.spacing.xl,
+        paddingBottom: theme.spacing.xl,
+    },
+    description: {
         fontSize: 15,
         color: theme.colors.textSecondary,
+        textAlign: 'center',
+        lineHeight: 22,
+        marginBottom: theme.spacing.xl,
     },
-    linkHighlight: {
+    buttonWrapper: {
+        width: '100%',
+    },
+    mainButton: {
+        width: '100%',
+        height: 64,
+        borderRadius: 20,
+        ...theme.shadows.medium,
+    },
+    gradientButton: {
+        flex: 1,
+        borderRadius: 20,
+        flexDirection: 'row',
+        justifyContent: 'center',
+        alignItems: 'center',
+    },
+    buttonText: {
+        color: theme.colors.white,
+        fontSize: 18,
+        fontWeight: '800',
+        marginRight: theme.spacing.sm,
+    },
+    arrowIcon: {
+        backgroundColor: 'rgba(255,255,255,0.2)',
+        borderRadius: 10,
+        padding: 4,
+    },
+    secondaryButton: {
+        marginTop: theme.spacing.lg,
+        alignItems: 'center',
+    },
+    secondaryButtonText: {
+        fontSize: 14,
+        color: theme.colors.textSecondary,
+    },
+    signUpHighlight: {
         color: theme.colors.primary,
-        fontWeight: '700',
+        fontWeight: '800',
     },
 });
 

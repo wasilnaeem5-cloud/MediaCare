@@ -1,8 +1,8 @@
 export const theme = {
   colors: {
-    primary: '#4F46E5', // Indigo
-    secondary: '#10B981', // Emerald
-    accent: '#8B5CF6', // Violet
+    primary: '#5E60CE', // Deep Violet
+    secondary: '#48BFE3', // Medical Cyan
+    accent: '#6930C3', // Rich Purple
     background: '#F8FAFC',
     surface: '#FFFFFF',
     text: '#1E293B',
@@ -13,10 +13,18 @@ export const theme = {
     warning: '#F59E0B',
     info: '#3B82F6',
     white: '#FFFFFF',
-    softBlue: '#E0E7FF',
+
+    // Gradients & Soft Tones
+    gradientStart: '#5E60CE',
+    gradientEnd: '#48BFE3',
+    softBlue: '#E0F2FE',
     softGreen: '#D1FAE5',
     softRed: '#FEE2E2',
     softPurple: '#F3E8FF',
+
+    // New Medical Tech Palette
+    medicalBlue: '#7400B8',
+    deepViolet: '#5390D9',
   },
   spacing: {
     xs: 4,
@@ -35,18 +43,18 @@ export const theme = {
   },
   shadows: {
     light: {
-      shadowColor: '#000',
+      shadowColor: '#5E60CE',
       shadowOffset: { width: 0, height: 2 },
-      shadowOpacity: 0.05,
+      shadowOpacity: 0.1,
       shadowRadius: 8,
       elevation: 2,
     },
     medium: {
-      shadowColor: '#000',
-      shadowOffset: { width: 0, height: 4 },
-      shadowOpacity: 0.1,
-      shadowRadius: 12,
-      elevation: 4,
+      shadowColor: '#5E60CE',
+      shadowOffset: { width: 0, height: 10 },
+      shadowOpacity: 0.2,
+      shadowRadius: 20,
+      elevation: 10,
     },
   }
 };

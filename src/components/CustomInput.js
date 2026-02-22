@@ -1,6 +1,12 @@
 import { Eye, EyeOff } from 'lucide-react-native';
-import { useState } from 'react';
-import { StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { useEffect, useState } from 'react';
+import { StyleSheet, TextInput, TouchableOpacity, View } from 'react-native';
+import Animated, {
+    interpolate,
+    useAnimatedStyle,
+    useSharedValue,
+    withTiming
+} from 'react-native-reanimated';
 import { theme } from '../utils/theme';
 
 const CustomInput = ({
@@ -17,31 +23,63 @@ const CustomInput = ({
     const [isFocused, setIsFocused] = useState(false);
     const [showPassword, setShowPassword] = useState(false);
 
+    // Animation for floating label
+    const labelAnim = useSharedValue(value ? 1 : 0);
+
+    useEffect(() => {
+        labelAnim.value = withTiming(isFocused || value ? 1 : 0, { duration: 200 });
+    }, [isFocused, value]);
+
+    const labelStyle = useAnimatedStyle(() => {
+        return {
+            transform: [
+                { translateY: interpolate(labelAnim.value, [0, 1], [0, -28]) },
+                { scale: interpolate(labelAnim.value, [0, 1], [1, 0.85]) }
+            ],
+            color: interpolate(labelAnim.value, [0, 1], [0, 1]) === 1
+                ? theme.colors.primary
+                : theme.colors.textSecondary,
+        };
+    });
+
+    const borderStyle = useAnimatedStyle(() => ({
+        borderColor: withTiming(
+            error ? theme.colors.error : (isFocused ? theme.colors.primary : theme.colors.border),
+            { duration: 200 }
+        ),
+        borderWidth: withTiming(isFocused ? 2 : 1.5, { duration: 200 }),
+        backgroundColor: withTiming(isFocused ? theme.colors.white : 'rgba(255,255,255,0.7)', { duration: 200 }),
+    }));
+
     return (
         <View style={styles.container}>
-            {label && <Text style={styles.label}>{label}</Text>}
-            <View
-                style={[
-                    styles.inputContainer,
-                    isFocused && styles.inputFocused,
-                    error && styles.inputError,
-                ]}
-            >
-                {Icon && <Icon size={20} color={theme.colors.textSecondary} style={styles.icon} />}
-                <TextInput
-                    style={styles.input}
-                    value={value}
-                    onChangeText={onChangeText}
-                    placeholder={placeholder}
-                    placeholderTextColor={theme.colors.textSecondary}
-                    secureTextEntry={secureTextEntry && !showPassword}
-                    keyboardType={keyboardType}
-                    onFocus={() => setIsFocused(true)}
-                    onBlur={() => setIsFocused(false)}
-                    {...props}
-                />
+            <Animated.View style={[styles.inputWrapper, borderStyle]}>
+                {Icon && <Icon size={20} color={isFocused ? theme.colors.primary : theme.colors.textSecondary} style={styles.icon} />}
+
+                <View style={styles.textInputContainer}>
+                    <Animated.Text style={[styles.floatingLabel, labelStyle]}>
+                        {label}
+                    </Animated.Text>
+                    <TextInput
+                        style={styles.input}
+                        value={value}
+                        onChangeText={onChangeText}
+                        onFocus={() => setIsFocused(true)}
+                        onBlur={() => setIsFocused(false)}
+                        secureTextEntry={secureTextEntry && !showPassword}
+                        keyboardType={keyboardType}
+                        selectionColor={theme.colors.primary}
+                        placeholder={isFocused ? placeholder : ""}
+                        placeholderTextColor={theme.colors.textSecondary}
+                        {...props}
+                    />
+                </View>
+
                 {secureTextEntry && (
-                    <TouchableOpacity onPress={() => setShowPassword(!showPassword)}>
+                    <TouchableOpacity
+                        onPress={() => setShowPassword(!showPassword)}
+                        style={styles.eyeBtn}
+                    >
                         {showPassword ? (
                             <EyeOff size={20} color={theme.colors.textSecondary} />
                         ) : (
@@ -49,52 +87,55 @@ const CustomInput = ({
                         )}
                     </TouchableOpacity>
                 )}
-            </View>
-            {error && <Text style={styles.errorText}>{error}</Text>}
+            </Animated.View>
+            {error && <Animated.Text style={styles.errorText}>{error}</Animated.Text>}
         </View>
     );
 };
 
 const styles = StyleSheet.create({
     container: {
-        marginBottom: theme.spacing.md,
+        marginBottom: 20,
         width: '100%',
     },
-    label: {
-        fontSize: 14,
-        fontWeight: '600',
-        color: theme.colors.text,
-        marginBottom: theme.spacing.xs,
-    },
-    inputContainer: {
+    inputWrapper: {
         flexDirection: 'row',
         alignItems: 'center',
-        backgroundColor: theme.colors.white,
-        borderWidth: 1.5,
-        borderColor: theme.colors.border,
-        borderRadius: theme.borderRadius.md,
-        paddingHorizontal: theme.spacing.md,
-        height: 56,
+        height: 64,
+        borderRadius: 18,
+        paddingHorizontal: 16,
+        ...theme.shadows.light,
     },
-    inputFocused: {
-        borderColor: theme.colors.primary,
+    textInputContainer: {
+        flex: 1,
+        height: '100%',
+        justifyContent: 'center',
     },
-    inputError: {
-        borderColor: theme.colors.error,
-    },
-    icon: {
-        marginRight: theme.spacing.sm,
+    floatingLabel: {
+        position: 'absolute',
+        left: 0,
+        fontWeight: '600',
+        fontSize: 16,
     },
     input: {
         flex: 1,
-        height: '100%',
         fontSize: 16,
         color: theme.colors.text,
+        fontWeight: '500',
+        paddingTop: 14, // Leave space for label
+    },
+    icon: {
+        marginRight: 12,
+    },
+    eyeBtn: {
+        padding: 4,
     },
     errorText: {
         color: theme.colors.error,
         fontSize: 12,
-        marginTop: theme.spacing.xs,
+        marginTop: 6,
+        marginLeft: 12,
+        fontWeight: '600',
     },
 });
 

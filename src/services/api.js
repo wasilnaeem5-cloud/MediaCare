@@ -2,7 +2,7 @@ import axios from 'axios';
 import { storage } from '../utils/storage';
 
 // Replace with your local IP and port 5000 for physical device testing
-export const BASE_URL = 'http://192.168.0.108:5000/api';
+export const BASE_URL = 'http://192.168.100.109:5000/api';
 
 const api = axios.create({
     baseURL: BASE_URL,

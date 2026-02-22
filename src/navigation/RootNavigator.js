@@ -29,12 +29,13 @@ const RootNavigator = () => {
                 {userToken == null ? (
                     <Stack.Screen name="Auth" component={AuthNavigator} />
                 ) : (
-                    <Stack.Screen name="Main" component={MainNavigator} />
+                    <>
+                        <Stack.Screen name="Main" component={MainNavigator} />
+                        <Stack.Screen name="ScheduleAppointment" component={ScheduleAppointmentScreen} />
+                        <Stack.Screen name="Confirmation" component={AppointmentConfirmationScreen} />
+                        <Stack.Screen name="FAQ" component={FAQHelpScreen} />
+                    </>
                 )}
-
-                <Stack.Screen name="ScheduleAppointment" component={ScheduleAppointmentScreen} />
-                <Stack.Screen name="Confirmation" component={AppointmentConfirmationScreen} />
-                <Stack.Screen name="FAQ" component={FAQHelpScreen} />
             </Stack.Navigator>
         </NavigationContainer>
     );
