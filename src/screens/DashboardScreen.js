@@ -1,23 +1,126 @@
 import { useFocusEffect } from '@react-navigation/native';
+import * as Haptics from 'expo-haptics';
+import { LinearGradient } from 'expo-linear-gradient';
 import {
     Activity,
     Calendar,
-    ChevronRight,
     Clock,
+    Droplets,
     FileText,
     HeartPulse,
+    Moon,
     PlusCircle,
-    TrendingUp,
+    Smartphone,
     User
 } from 'lucide-react-native';
-import { useCallback, useState } from 'react';
-import { ActivityIndicator, RefreshControl, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { useCallback, useEffect, useState } from 'react';
+import {
+    ActivityIndicator,
+    Dimensions,
+    RefreshControl,
+    ScrollView,
+    StyleSheet,
+    Text,
+    TouchableOpacity,
+    View
+} from 'react-native';
+import Animated, {
+    Easing,
+    useAnimatedStyle,
+    useSharedValue,
+    withDelay,
+    withRepeat,
+    withSequence,
+    withSpring,
+    withTiming
+} from 'react-native-reanimated';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Card from '../components/Card';
 import Header from '../components/Header';
 import api from '../services/api';
 import { useAuth } from '../utils/AuthContext';
 import { theme } from '../utils/theme';
+
+const { width } = Dimensions.get('window');
+
+const QuickAction = ({ title, icon: Icon, color, onPress, delay }) => {
+    const scale = useSharedValue(0.8);
+    const opacity = useSharedValue(0);
+
+    useEffect(() => {
+        scale.value = withDelay(delay, withSpring(1));
+        opacity.value = withDelay(delay, withTiming(1, { duration: 500 }));
+    }, []);
+
+    const animatedStyle = useAnimatedStyle(() => ({
+        transform: [{ scale: scale.value }],
+        opacity: opacity.value
+    }));
+
+    const handlePress = () => {
+        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+        onPress();
+    };
+
+    return (
+        <Animated.View style={[styles.quickActionContainer, animatedStyle]}>
+            <TouchableOpacity
+                style={styles.quickActionButton}
+                onPress={handlePress}
+                activeOpacity={0.7}
+            >
+                <LinearGradient
+                    colors={[color, color + 'CC']}
+                    style={styles.actionIconContainer}
+                >
+                    <Icon size={24} color={theme.colors.white} />
+                </LinearGradient>
+                <Text style={styles.actionTitle}>{title}</Text>
+            </TouchableOpacity>
+        </Animated.View>
+    );
+};
+
+const HealthStat = ({ label, value, unit, icon: Icon, color, trend }) => {
+    const pulse = useSharedValue(1);
+
+    useEffect(() => {
+        pulse.value = withRepeat(
+            withSequence(
+                withTiming(1.05, { duration: 1500, easing: Easing.inOut(Easing.sin) }),
+                withTiming(1, { duration: 1500 })
+            ),
+            -1,
+            true
+        );
+    }, []);
+
+    const animatedStyle = useAnimatedStyle(() => ({
+        transform: [{ scale: pulse.value }]
+    }));
+
+    return (
+        <Card style={styles.insightCard}>
+            <Animated.View style={[styles.insightIcon, { backgroundColor: color + '15' }, animatedStyle]}>
+                <Icon size={20} color={color} />
+            </Animated.View>
+            <View style={styles.insightContent}>
+                <View style={styles.insightValueRow}>
+                    <Text style={styles.insightVal}>{value}</Text>
+                    <Text style={styles.insightUnit}> {unit}</Text>
+                </View>
+                <View style={styles.insightLabelRow}>
+                    <Text style={styles.insightLabel}>{label}</Text>
+                    {trend && (
+                        <Text style={[styles.trendText, { color: trend === 'up' ? theme.colors.error : theme.colors.success }]}>
+                            {trend === 'up' ? '↑' : '↓'}
+                        </Text>
+                    )}
+                </View>
+            </View>
+        </Card>
+    );
+};
 
 const DashboardScreen = ({ navigation }) => {
     const { user } = useAuth();
@@ -27,24 +130,20 @@ const DashboardScreen = ({ navigation }) => {
 
     const fetchDashboardData = async () => {
         try {
-            console.log('[Dashboard] Fetching upcoming appointments...');
             const response = await api.get('/appointments/upcoming');
-
-            // Assuming the API returns an array of appointments sorted by date
             if (response.data && response.data.length > 0) {
                 setUpcomingAppointment(response.data[0]);
             } else {
                 setUpcomingAppointment(null);
             }
         } catch (error) {
-            console.error('[Dashboard Error] Failed to fetch data', error);
+            console.error('[Dashboard Error]', error);
         } finally {
             setLoading(false);
             setRefreshing(false);
         }
     };
 
-    // Refresh data whenever the screen comes into focus
     useFocusEffect(
         useCallback(() => {
             fetchDashboardData();
@@ -52,27 +151,15 @@ const DashboardScreen = ({ navigation }) => {
     );
 
     const onRefresh = () => {
+        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
         setRefreshing(true);
         fetchDashboardData();
     };
 
-    const QuickCard = ({ title, icon: Icon, color, onPress }) => (
-        <TouchableOpacity
-            style={styles.quickCardContainer}
-            onPress={onPress}
-            activeOpacity={0.7}
-        >
-            <View style={[styles.quickCardIcon, { backgroundColor: color }]}>
-                <Icon size={24} color={theme.colors.white} />
-            </View>
-            <Text style={styles.quickCardTitle}>{title}</Text>
-        </TouchableOpacity>
-    );
-
-    const renderUpcomingApt = () => {
+    const renderUpcomingCard = () => {
         if (loading && !refreshing) {
             return (
-                <View style={styles.loaderContainer}>
+                <View style={styles.loadingPlaceholder}>
                     <ActivityIndicator color={theme.colors.primary} />
                 </View>
             );
@@ -80,357 +167,471 @@ const DashboardScreen = ({ navigation }) => {
 
         if (!upcomingAppointment) {
             return (
-                <Card style={styles.emptyAptCard}>
-                    <Text style={styles.emptyAptText}>No upcoming appointments</Text>
-                    <TouchableOpacity
-                        style={styles.bookNowBtn}
-                        onPress={() => navigation.navigate('ScheduleAppointment')}
-                    >
-                        <Text style={styles.bookNowText}>Book Now</Text>
-                    </TouchableOpacity>
-                </Card>
+                <TouchableOpacity
+                    style={styles.emptyAptContainer}
+                    onPress={() => navigation.navigate('ScheduleAppointment')}
+                >
+                    <PlusCircle size={32} color={theme.colors.primary} />
+                    <Text style={styles.emptyAptTitle}>No appointments scheduled</Text>
+                    <Text style={styles.emptyAptSub}>Stay proactive with your health!</Text>
+                </TouchableOpacity>
             );
         }
 
-        const aptDate = new Date(upcomingAppointment.date);
-        const dateString = aptDate.toLocaleDateString('en-US', {
-            weekday: 'long',
-            month: 'short',
-            day: 'numeric'
-        });
-
         return (
-            <Card style={styles.appointmentCard}>
-                <View style={styles.aptHeader}>
-                    <View style={styles.docInfo}>
+            <Card style={styles.premiumAptCard}>
+                <View style={styles.aptTop}>
+                    <View style={styles.docAvatarContainer}>
                         <View style={styles.docAvatar}>
-                            <Text style={styles.docInitial}>
-                                {upcomingAppointment.doctorName.charAt(0)}
-                            </Text>
+                            <User size={24} color={theme.colors.primary} />
                         </View>
-                        <View>
-                            <Text style={styles.docName}>{upcomingAppointment.doctorName}</Text>
-                            <Text style={styles.docSpec}>Medical Specialist</Text>
+                        <View style={styles.onlineBadge} />
+                    </View>
+                    <View style={styles.aptDocInfo}>
+                        <Text style={styles.premiumDocName}>{upcomingAppointment.doctorName}</Text>
+                        <Text style={styles.premiumDocSpec}>Medical Specialist</Text>
+                    </View>
+                    <View style={styles.statusChip}>
+                        <Text style={styles.statusText}>Upcoming</Text>
+                    </View>
+                </View>
+
+                <View style={styles.aptDivider} />
+
+                <View style={styles.aptBottom}>
+                    <View style={styles.aptDateTime}>
+                        <View style={styles.aptDateBox}>
+                            <Calendar size={18} color={theme.colors.primary} />
+                            <Text style={styles.aptDetailText}>{upcomingAppointment.date}</Text>
+                        </View>
+                        <View style={styles.aptDateBox}>
+                            <Clock size={18} color={theme.colors.primary} />
+                            <Text style={styles.aptDetailText}>{upcomingAppointment.time}</Text>
                         </View>
                     </View>
                     <TouchableOpacity
-                        style={styles.aptDetailBtn}
+                        style={styles.viewDetailBtn}
                         onPress={() => navigation.navigate('Appointments')}
                     >
-                        <ChevronRight size={20} color={theme.colors.textSecondary} />
+                        <Text style={styles.viewDetailText}>View Details</Text>
                     </TouchableOpacity>
-                </View>
-                <View style={styles.aptFooter}>
-                    <View style={styles.aptMeta}>
-                        <Calendar size={16} color={theme.colors.primary} />
-                        <Text style={styles.aptMetaText}>{upcomingAppointment.date}</Text>
-                    </View>
-                    <View style={styles.aptMeta}>
-                        <Clock size={16} color={theme.colors.primary} />
-                        <Text style={styles.aptMetaText}>{upcomingAppointment.time}</Text>
-                    </View>
                 </View>
             </Card>
         );
     };
 
     return (
-        <SafeAreaView style={styles.container}>
-            <Header title="MediCare" onProfilePress={() => navigation.navigate('Profile')} />
+        <View style={styles.container}>
+            <LinearGradient
+                colors={['#EEF2FF', '#FFFFFF']}
+                style={StyleSheet.absoluteFill}
+            />
 
-            <ScrollView
-                contentContainerStyle={styles.scrollContent}
-                refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
-            >
-                <View style={styles.welcomeSection}>
-                    <Text style={styles.greeting}>Hello, {user?.name || 'User'}! </Text>
-                    <Text style={styles.subtitle}>How are you feeling today?</Text>
-                </View>
+            <SafeAreaView style={{ flex: 1 }}>
+                <Header
+                    user={user}
+                    onProfilePress={() => navigation.navigate('Profile')}
+                />
 
-                <View style={styles.quickActions}>
-                    <QuickCard
-                        title="Book Appt"
-                        icon={PlusCircle}
-                        color={theme.colors.primary}
-                        onPress={() => navigation.navigate('ScheduleAppointment')}
-                    />
-                    <QuickCard
-                        title="Records"
-                        icon={FileText}
-                        color={theme.colors.secondary}
-                        onPress={() => navigation.navigate('Records')}
-                    />
-                    <QuickCard
-                        title="Schedule"
-                        icon={Calendar}
-                        color={theme.colors.accent}
-                        onPress={() => navigation.navigate('Appointments')}
-                    />
-                    <QuickCard
-                        title="Profile"
-                        icon={User}
-                        color={theme.colors.info}
-                        onPress={() => navigation.navigate('Profile')}
-                    />
-                </View>
-
-                <View style={styles.section}>
-                    <View style={styles.sectionHeader}>
-                        <Text style={styles.sectionTitle}>Upcoming Appointment</Text>
-                        <TouchableOpacity onPress={() => navigation.navigate('Appointments')}>
-                            <Text style={styles.seeAll}>See All</Text>
-                        </TouchableOpacity>
+                <ScrollView
+                    contentContainerStyle={styles.scrollContent}
+                    showsVerticalScrollIndicator={false}
+                    refreshControl={
+                        <RefreshControl
+                            refreshing={refreshing}
+                            onRefresh={onRefresh}
+                            tintColor={theme.colors.primary}
+                        />
+                    }
+                >
+                    {/* Welcome Banner */}
+                    <View style={styles.bannerSection}>
+                        <LinearGradient
+                            colors={[theme.colors.primary, theme.colors.accent]}
+                            start={{ x: 0, y: 0 }}
+                            end={{ x: 1, y: 1 }}
+                            style={styles.bannerBackground}
+                        >
+                            <View style={styles.bannerTextContainer}>
+                                <Text style={styles.bannerTitle}>Daily Health Tip</Text>
+                                <Text style={styles.bannerSubtitle}>
+                                    Drinking 8 glasses of water today keeps your energy levels high! 💧
+                                </Text>
+                            </View>
+                            <View style={styles.bannerIconWrapper}>
+                                <HeartPulse size={60} color="rgba(255,255,255,0.2)" />
+                            </View>
+                        </LinearGradient>
                     </View>
 
-                    {renderUpcomingApt()}
-                </View>
+                    {/* Quick Actions */}
+                    <View style={styles.quickActionsContainer}>
+                        <QuickAction
+                            title="Book"
+                            icon={PlusCircle}
+                            color={theme.colors.primary}
+                            delay={100}
+                            onPress={() => navigation.navigate('ScheduleAppointment')}
+                        />
+                        <QuickAction
+                            title="Records"
+                            icon={FileText}
+                            color={theme.colors.secondary}
+                            delay={200}
+                            onPress={() => navigation.navigate('Records')}
+                        />
+                        <QuickAction
+                            title="Schedule"
+                            icon={Calendar}
+                            color={theme.colors.accent}
+                            delay={300}
+                            onPress={() => navigation.navigate('Appointments')}
+                        />
+                        <QuickAction
+                            title="Profile"
+                            icon={User}
+                            color={theme.colors.info}
+                            delay={400}
+                            onPress={() => navigation.navigate('Profile')}
+                        />
+                    </View>
 
-                <View style={styles.section}>
-                    <Text style={styles.sectionTitle}>Health Insights</Text>
-                    <View style={styles.insightsRow}>
-                        <Card style={styles.insightCard}>
-                            <Activity size={24} color={theme.colors.error} />
-                            <Text style={styles.insightVal}>72 bpm</Text>
-                            <Text style={styles.insightLabel}>Heart Rate</Text>
-                        </Card>
-                        <Card style={styles.insightCard}>
-                            <TrendingUp size={24} color={theme.colors.secondary} />
-                            <Text style={styles.insightVal}>120/80</Text>
-                            <Text style={styles.insightLabel}>Blood Pressure</Text>
-                        </Card>
+                    {/* Upcoming Appointment */}
+                    <View style={styles.section}>
+                        <View style={styles.sectionHeader}>
+                            <Text style={styles.sectionTitle}>Your Appointment</Text>
+                            <TouchableOpacity onPress={() => navigation.navigate('Appointments')}>
+                                <Text style={styles.seeAllText}>See All</Text>
+                            </TouchableOpacity>
+                        </View>
+                        {renderUpcomingCard()}
                     </View>
-                </View>
 
-                <Card style={styles.promoCard}>
-                    <View style={styles.promoContent}>
-                        <Text style={styles.promoTitle}>Stay Healthy!</Text>
-                        <Text style={styles.promoText}>
-                            Regular check-ups can help find problems before they start.
-                        </Text>
-                        <TouchableOpacity style={styles.promoBtn}>
-                            <Text style={styles.promoBtnText}>Learn More</Text>
-                        </TouchableOpacity>
+                    {/* Health Summary */}
+                    <View style={styles.section}>
+                        <Text style={styles.sectionTitle}>Today's Summary</Text>
+                        <View style={styles.summaryGrid}>
+                            <HealthStat
+                                label="Heart Rate"
+                                value="72"
+                                unit="bpm"
+                                icon={Activity}
+                                color={theme.colors.error}
+                                trend="up"
+                            />
+                            <HealthStat
+                                label="Hydration"
+                                value="1.2"
+                                unit="L"
+                                icon={Droplets}
+                                color={theme.colors.info}
+                            />
+                            <HealthStat
+                                label="Steps"
+                                value="4,820"
+                                unit=""
+                                icon={Smartphone}
+                                color={theme.colors.secondary}
+                            />
+                            <HealthStat
+                                label="Sleep"
+                                value="7.5"
+                                unit="hrs"
+                                icon={Moon}
+                                color={theme.colors.accent}
+                            />
+                        </View>
                     </View>
-                    <View style={styles.promoIcon}>
-                        <HeartPulse size={40} color={theme.colors.white} />
+
+                    {/* Encouraging Footer */}
+                    <View style={styles.footerEncouragement}>
+                        <Text style={styles.footerGreeting}>You're doing great today! ✨</Text>
+                        <Text style={styles.footerSub}>Keep up the healthy habits.</Text>
                     </View>
-                </Card>
-            </ScrollView>
-        </SafeAreaView>
+                </ScrollView>
+            </SafeAreaView>
+        </View>
     );
 };
 
 const styles = StyleSheet.create({
     container: {
         flex: 1,
-        backgroundColor: theme.colors.background,
     },
     scrollContent: {
-        paddingBottom: theme.spacing.xl,
+        paddingBottom: 100,
     },
-    welcomeSection: {
+    bannerSection: {
         paddingHorizontal: theme.spacing.lg,
-        paddingVertical: theme.spacing.md,
+        marginTop: theme.spacing.sm,
     },
-    greeting: {
-        fontSize: 28,
+    bannerBackground: {
+        height: 120,
+        borderRadius: 24,
+        flexDirection: 'row',
+        alignItems: 'center',
+        paddingHorizontal: 20,
+        ...theme.shadows.medium,
+    },
+    bannerTextContainer: {
+        flex: 1,
+    },
+    bannerTitle: {
+        color: 'rgba(255,255,255,0.8)',
+        fontSize: 14,
+        fontWeight: '700',
+        textTransform: 'uppercase',
+        letterSpacing: 1,
+    },
+    bannerSubtitle: {
+        color: theme.colors.white,
+        fontSize: 18,
         fontWeight: '800',
-        color: theme.colors.text,
+        marginTop: 4,
+        lineHeight: 24,
     },
-    subtitle: {
-        fontSize: 16,
-        color: theme.colors.textSecondary,
-        marginTop: theme.spacing.xs,
+    bannerIconWrapper: {
+        marginLeft: 10,
     },
-    quickActions: {
+    quickActionsContainer: {
         flexDirection: 'row',
         justifyContent: 'space-between',
         paddingHorizontal: theme.spacing.lg,
-        marginTop: theme.spacing.lg,
+        marginTop: 24,
     },
-    quickCardContainer: {
+    quickActionContainer: {
+        width: (width - 64) / 4,
         alignItems: 'center',
-        width: '22%',
     },
-    quickCardIcon: {
-        width: 56,
-        height: 56,
-        borderRadius: 16,
+    quickActionButton: {
+        alignItems: 'center',
+        width: '100%',
+    },
+    actionIconContainer: {
+        width: 60,
+        height: 60,
+        borderRadius: 20,
         justifyContent: 'center',
         alignItems: 'center',
-        marginBottom: theme.spacing.xs,
+        marginBottom: 8,
         ...theme.shadows.light,
     },
-    quickCardTitle: {
+    actionTitle: {
         fontSize: 12,
-        fontWeight: '600',
+        fontWeight: '700',
         color: theme.colors.text,
         textAlign: 'center',
     },
     section: {
-        marginTop: theme.spacing.lg,
+        marginTop: 32,
         paddingHorizontal: theme.spacing.lg,
     },
     sectionHeader: {
         flexDirection: 'row',
         justifyContent: 'space-between',
         alignItems: 'center',
-        marginBottom: theme.spacing.md,
+        marginBottom: 16,
     },
     sectionTitle: {
         fontSize: 20,
-        fontWeight: '700',
+        fontWeight: '800',
         color: theme.colors.text,
     },
-    seeAll: {
+    seeAllText: {
         fontSize: 14,
         color: theme.colors.primary,
-        fontWeight: '600',
-    },
-    appointmentCard: {
-        padding: theme.spacing.md,
-    },
-    emptyAptCard: {
-        padding: theme.spacing.xl,
-        alignItems: 'center',
-        justifyContent: 'center',
-        borderStyle: 'dashed',
-        borderWidth: 1,
-        borderColor: theme.colors.border,
-        backgroundColor: 'rgba(0,0,0,0.02)',
-    },
-    emptyAptText: {
-        color: theme.colors.textSecondary,
-        fontSize: 14,
-        marginBottom: theme.spacing.md,
-    },
-    bookNowBtn: {
-        backgroundColor: theme.colors.primary,
-        paddingHorizontal: theme.spacing.lg,
-        paddingVertical: theme.spacing.sm,
-        borderRadius: theme.borderRadius.sm,
-    },
-    bookNowText: {
-        color: theme.colors.white,
         fontWeight: '700',
     },
-    aptHeader: {
-        flexDirection: 'row',
-        justifyContent: 'space-between',
-        alignItems: 'center',
-        borderBottomWidth: 1,
-        borderBottomColor: theme.colors.border,
-        paddingBottom: theme.spacing.md,
-        marginBottom: theme.spacing.md,
-    },
-    docInfo: {
-        flexDirection: 'row',
+    loadingPlaceholder: {
+        height: 160,
+        justifyContent: 'center',
         alignItems: 'center',
     },
-    docAvatar: {
-        width: 48,
-        height: 48,
+    emptyAptContainer: {
+        height: 160,
         borderRadius: 24,
-        backgroundColor: theme.colors.softBlue,
+        backgroundColor: theme.colors.white,
+        borderWidth: 2,
+        borderStyle: 'dashed',
+        borderColor: theme.colors.border,
         justifyContent: 'center',
         alignItems: 'center',
-        marginRight: theme.spacing.md,
     },
-    docInitial: {
-        fontSize: 18,
-        fontWeight: '700',
-        color: theme.colors.primary,
-    },
-    docName: {
+    emptyAptTitle: {
         fontSize: 16,
         fontWeight: '700',
         color: theme.colors.text,
+        marginTop: 12,
     },
-    docSpec: {
+    emptyAptSub: {
         fontSize: 14,
         color: theme.colors.textSecondary,
+        marginTop: 4,
     },
-    aptFooter: {
-        flexDirection: 'row',
-        justifyContent: 'space-between',
+    premiumAptCard: {
+        borderRadius: 24,
+        padding: 20,
+        backgroundColor: theme.colors.white,
+        ...theme.shadows.medium,
     },
-    aptMeta: {
+    aptTop: {
         flexDirection: 'row',
         alignItems: 'center',
     },
-    aptMetaText: {
-        fontSize: 14,
-        color: theme.colors.text,
-        marginLeft: theme.spacing.xs,
-        fontWeight: '500',
+    docAvatarContainer: {
+        position: 'relative',
     },
-    loaderContainer: {
-        height: 100,
+    docAvatar: {
+        width: 54,
+        height: 54,
+        borderRadius: 18,
+        backgroundColor: theme.colors.softBlue,
         justifyContent: 'center',
         alignItems: 'center',
+        borderWidth: 2,
+        borderColor: theme.colors.white,
     },
-    insightsRow: {
+    onlineBadge: {
+        position: 'absolute',
+        bottom: -2,
+        right: -2,
+        width: 14,
+        height: 14,
+        borderRadius: 7,
+        backgroundColor: theme.colors.success,
+        borderWidth: 2,
+        borderColor: theme.colors.white,
+    },
+    aptDocInfo: {
+        flex: 1,
+        marginLeft: 16,
+    },
+    premiumDocName: {
+        fontSize: 18,
+        fontWeight: '800',
+        color: theme.colors.text,
+    },
+    premiumDocSpec: {
+        fontSize: 14,
+        color: theme.colors.textSecondary,
+        fontWeight: '500',
+    },
+    statusChip: {
+        backgroundColor: 'rgba(94, 96, 206, 0.1)',
+        paddingHorizontal: 12,
+        paddingVertical: 6,
+        borderRadius: 10,
+    },
+    statusText: {
+        fontSize: 12,
+        fontWeight: '800',
+        color: theme.colors.primary,
+    },
+    aptDivider: {
+        height: 1,
+        backgroundColor: theme.colors.border,
+        opacity: 0.5,
+        marginVertical: 20,
+    },
+    aptBottom: {
         flexDirection: 'row',
         justifyContent: 'space-between',
-        marginTop: theme.spacing.sm,
+        alignItems: 'center',
+    },
+    aptDateTime: {
+        flex: 1,
+    },
+    aptDateBox: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        marginVertical: 2,
+    },
+    aptDetailText: {
+        fontSize: 14,
+        fontWeight: '600',
+        color: theme.colors.text,
+        marginLeft: 8,
+    },
+    viewDetailBtn: {
+        backgroundColor: theme.colors.primary,
+        paddingHorizontal: 16,
+        paddingVertical: 10,
+        borderRadius: 14,
+    },
+    viewDetailText: {
+        color: theme.colors.white,
+        fontSize: 14,
+        fontWeight: '700',
+    },
+    summaryGrid: {
+        flexDirection: 'row',
+        flexWrap: 'wrap',
+        justifyContent: 'space-between',
+        marginTop: 8,
     },
     insightCard: {
         width: '48%',
-        alignItems: 'center',
-        paddingVertical: theme.spacing.lg,
-    },
-    insightVal: {
-        fontSize: 20,
-        fontWeight: '800',
-        color: theme.colors.text,
-        marginTop: theme.spacing.sm,
-    },
-    insightLabel: {
-        fontSize: 12,
-        color: theme.colors.textSecondary,
-        marginTop: theme.spacing.xs,
-    },
-    promoCard: {
-        margin: theme.spacing.lg,
-        backgroundColor: theme.colors.primary,
         flexDirection: 'row',
         alignItems: 'center',
-        padding: theme.spacing.lg,
-        position: 'relative',
-        overflow: 'hidden',
+        padding: 16,
+        borderRadius: 20,
+        marginBottom: 16,
     },
-    promoContent: {
+    insightIcon: {
+        width: 44,
+        height: 44,
+        borderRadius: 14,
+        justifyContent: 'center',
+        alignItems: 'center',
+    },
+    insightContent: {
+        marginLeft: 12,
         flex: 1,
-        zIndex: 1,
     },
-    promoTitle: {
-        color: theme.colors.white,
-        fontSize: 22,
+    insightValueRow: {
+        flexDirection: 'row',
+        alignItems: 'baseline',
+    },
+    insightVal: {
+        fontSize: 18,
         fontWeight: '800',
+        color: theme.colors.text,
     },
-    promoText: {
-        color: 'rgba(255,255,255,0.8)',
-        fontSize: 14,
-        marginTop: theme.spacing.xs,
-        marginBottom: theme.spacing.md,
+    insightUnit: {
+        fontSize: 12,
+        color: theme.colors.textSecondary,
+        fontWeight: '600',
     },
-    promoBtn: {
-        backgroundColor: theme.colors.white,
-        paddingHorizontal: theme.spacing.md,
-        paddingVertical: theme.spacing.sm,
-        borderRadius: theme.borderRadius.sm,
-        alignSelf: 'flex-start',
+    insightLabelRow: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        marginTop: 2,
     },
-    promoBtnText: {
-        color: theme.colors.primary,
+    insightLabel: {
+        fontSize: 11,
+        color: theme.colors.textSecondary,
         fontWeight: '700',
-        fontSize: 14,
     },
-    promoIcon: {
-        position: 'absolute',
-        right: -10,
-        bottom: -10,
-        opacity: 0.2,
+    trendText: {
+        fontSize: 12,
+        fontWeight: '900',
+        marginLeft: 4,
+    },
+    footerEncouragement: {
+        alignItems: 'center',
+        marginTop: 40,
+        paddingBottom: 40,
+    },
+    footerGreeting: {
+        fontSize: 18,
+        fontWeight: '800',
+        color: theme.colors.text,
+    },
+    footerSub: {
+        fontSize: 14,
+        color: theme.colors.textSecondary,
+        marginTop: 4,
     }
 });
 

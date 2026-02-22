@@ -1,5 +1,13 @@
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
+import * as Haptics from 'expo-haptics';
 import { Calendar, FileText, Home, User } from 'lucide-react-native';
+import { useEffect } from 'react';
+import Animated, {
+    useAnimatedStyle,
+    useSharedValue,
+    withSequence,
+    withSpring
+} from 'react-native-reanimated';
 import { theme } from '../utils/theme';
 
 import AppointmentsScreen from '../screens/AppointmentsScreen';
@@ -9,34 +17,64 @@ import ProfileSettingScreen from '../screens/ProfileSettingScreen';
 
 const Tab = createBottomTabNavigator();
 
+const AnimatedTabIcon = ({ Icon, focused, color, size }) => {
+    const scale = useSharedValue(1);
+
+    useEffect(() => {
+        if (focused) {
+            Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+            scale.value = withSequence(
+                withSpring(1.3, { damping: 10, stiffness: 100 }),
+                withSpring(1)
+            );
+        }
+    }, [focused]);
+
+    const animatedStyle = useAnimatedStyle(() => ({
+        transform: [{ scale: scale.value }]
+    }));
+
+    return (
+        <Animated.View style={animatedStyle}>
+            <Icon size={size} color={color} fill={focused ? color + '20' : 'transparent'} />
+        </Animated.View>
+    );
+};
+
 const MainNavigator = () => {
     return (
         <Tab.Navigator
             screenOptions={({ route }) => ({
                 headerShown: false,
                 tabBarIcon: ({ focused, color, size }) => {
-                    let iconName;
-                    if (route.name === 'Home') iconName = Home;
-                    else if (route.name === 'Appointments') iconName = Calendar;
-                    else if (route.name === 'Records') iconName = FileText;
-                    else if (route.name === 'Profile') iconName = User;
+                    let Icon;
+                    if (route.name === 'Home') Icon = Home;
+                    else if (route.name === 'Appointments') Icon = Calendar;
+                    else if (route.name === 'Records') Icon = FileText;
+                    else if (route.name === 'Profile') Icon = User;
 
-                    const Icon = iconName;
-                    return <Icon size={size} color={color} />;
+                    return <AnimatedTabIcon Icon={Icon} focused={focused} color={color} size={size} />;
                 },
                 tabBarActiveTintColor: theme.colors.primary,
                 tabBarInactiveTintColor: theme.colors.textSecondary,
                 tabBarStyle: {
-                    paddingBottom: 5,
-                    paddingTop: 5,
-                    height: 60,
-                    borderTopWidth: 1,
-                    borderTopColor: theme.colors.border,
+                    paddingBottom: 10,
+                    paddingTop: 10,
+                    height: 75,
+                    borderTopWidth: 0,
                     backgroundColor: theme.colors.white,
+                    ...theme.shadows.medium,
+                    borderTopLeftRadius: 30,
+                    borderTopRightRadius: 30,
+                    position: 'absolute', // Floating effect
+                    bottom: 0,
+                    left: 0,
+                    right: 0,
                 },
                 tabBarLabelStyle: {
                     fontSize: 12,
-                    fontWeight: '600',
+                    fontWeight: '800',
+                    marginTop: 4,
                 },
             })}
         >

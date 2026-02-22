@@ -5,8 +5,9 @@ const morgan = require('morgan');
 const mongoose = require('mongoose');
 const connectDB = require('./config/db');
 
+const path = require('path');
 // 1. Load environment variables
-dotenv.config();
+dotenv.config({ path: path.join(__dirname, '.env') });
 
 // 2. Initial Logging
 console.log('--- MediCare Backend: Audit Mode ---');

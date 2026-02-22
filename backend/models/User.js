@@ -27,8 +27,30 @@ const userSchema = new mongoose.Schema(
         },
         role: {
             type: String,
+            enum: ['patient', 'admin'],
             default: 'patient',
         },
+        healthScore: {
+            type: Number,
+            default: 75,
+            min: 0,
+            max: 100
+        },
+        vitals: {
+            heartRate: { type: Number, default: 72 },
+            bloodPressure: { type: String, default: '120/80' },
+            hydration: { type: Number, default: 1.5 }, // Liters
+            steps: { type: Number, default: 0 },
+            sleep: { type: Number, default: 0 }, // Hours
+        },
+        vitalsHistory: [{
+            heartRate: Number,
+            bloodPressure: String,
+            date: { type: Date, default: Date.now }
+        }],
+        preferences: {
+            darkMode: { type: Boolean, default: false }
+        }
     },
     {
         timestamps: true,
