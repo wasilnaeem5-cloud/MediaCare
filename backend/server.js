@@ -37,9 +37,13 @@ if (process.env.NODE_ENV === 'development') {
 // 4. Routes
 app.use('/api/auth', require('./routes/authRoutes'));
 app.use('/api/appointments', require('./routes/appointmentRoutes'));
+app.use('/api/medications', require('./routes/medicationRoutes'));
+app.use('/api/admin', require('./routes/adminRoutes'));
+app.use('/api/insights', require('./routes/insightRoutes'));
+app.use('/api/records', require('./routes/recordRoutes'));
 
 app.get('/', (req, res) => {
-    res.json({ message: 'MediCare API is active', status: 'Healthy' });
+    res.json({ message: 'MediCare Startup MVP API is active', status: 'Healthy' });
 });
 
 // 5. Start Server Lifecycle

@@ -2,23 +2,25 @@ import { Bell, User } from 'lucide-react-native';
 import { useEffect } from 'react';
 import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import Animated, {
+    interpolate,
     useAnimatedStyle,
     useSharedValue,
     withRepeat,
     withSequence,
     withTiming
 } from 'react-native-reanimated';
-import { theme } from '../utils/theme';
+import { useTheme } from '../utils/ThemeContext';
 
 const Header = ({ title, user, onProfilePress, onNotificationPress }) => {
+    const { theme, isDarkMode } = useTheme();
     const bellScale = useSharedValue(1);
     const pulseAnim = useSharedValue(1);
 
     useEffect(() => {
         pulseAnim.value = withRepeat(
             withSequence(
-                withTiming(1.2, { duration: 1000 }),
-                withTiming(1, { duration: 1000 })
+                withTiming(1.2, { duration: 1500 }),
+                withTiming(1, { duration: 1500 })
             ),
             -1,
             true
@@ -31,7 +33,7 @@ const Header = ({ title, user, onProfilePress, onNotificationPress }) => {
 
     const glowStyle = useAnimatedStyle(() => ({
         transform: [{ scale: pulseAnim.value }],
-        opacity: interpolate(pulseAnim.value, [1, 1.2], [0.6, 0.2])
+        opacity: interpolate(pulseAnim.value, [1, 1.2], [0.4, 0.1])
     }));
 
     const handleBellPress = () => {
@@ -60,17 +62,19 @@ const Header = ({ title, user, onProfilePress, onNotificationPress }) => {
         <View style={styles.container}>
             <View style={styles.leftSection}>
                 <Text style={styles.greetingText}>{getGreeting()} {getGreetingEmoji()}</Text>
-                <Text style={styles.userName}>{user?.name?.split(' ')[0] || 'Healthier'}!</Text>
+                <Text style={[styles.userName, { color: theme.colors.text }]}>
+                    {user?.name?.split(' ')[0] || 'Healthier'}!
+                </Text>
             </View>
 
             <View style={styles.rightSection}>
                 <TouchableOpacity
-                    style={styles.iconButton}
+                    style={[styles.iconButton, { backgroundColor: theme.colors.surface }]}
                     onPress={handleBellPress}
                     activeOpacity={0.7}
                 >
                     <Animated.View style={animatedBellStyle}>
-                        <Bell size={24} color={theme.colors.text} />
+                        <Bell size={22} color={theme.colors.text} />
                     </Animated.View>
                     <View style={styles.badge} />
                 </TouchableOpacity>
@@ -80,13 +84,9 @@ const Header = ({ title, user, onProfilePress, onNotificationPress }) => {
                     onPress={onProfilePress}
                     activeOpacity={0.8}
                 >
-                    <Animated.View style={[styles.glowRing, glowStyle]} />
-                    <View style={styles.avatar}>
-                        {user?.avatar ? (
-                            <Text>Avatar</Text> // Placeholder for Image
-                        ) : (
-                            <User size={22} color={theme.colors.primary} />
-                        )}
+                    <Animated.View style={[styles.glowRing, { backgroundColor: theme.colors.primary }, glowStyle]} />
+                    <View style={[styles.avatar, { backgroundColor: theme.colors.softBlue, borderColor: theme.colors.surface }]}>
+                        <User size={22} color={theme.colors.primary} />
                     </View>
                 </TouchableOpacity>
             </View>
@@ -94,37 +94,29 @@ const Header = ({ title, user, onProfilePress, onNotificationPress }) => {
     );
 };
 
-// Helper function needed for glowStyle
-const interpolate = (value, inputRange, outputRange) => {
-    'worklet';
-    const [minIn, maxIn] = inputRange;
-    const [minOut, maxOut] = outputRange;
-    return minOut + (value - minIn) * (maxOut - minOut) / (maxIn - minIn);
-};
-
 const styles = StyleSheet.create({
     container: {
         flexDirection: 'row',
         justifyContent: 'space-between',
         alignItems: 'center',
-        paddingHorizontal: theme.spacing.lg,
-        paddingTop: theme.spacing.md,
-        paddingBottom: theme.spacing.lg,
+        paddingHorizontal: 20,
+        paddingVertical: 15,
         backgroundColor: 'transparent',
     },
     leftSection: {
         justifyContent: 'center',
     },
     greetingText: {
-        fontSize: 14,
-        fontWeight: '600',
-        color: theme.colors.textSecondary,
+        fontSize: 13,
+        fontWeight: '700',
+        color: '#94A3B8',
         marginBottom: 2,
+        textTransform: 'uppercase',
+        letterSpacing: 0.5
     },
     userName: {
         fontSize: 24,
-        fontWeight: '800',
-        color: theme.colors.text,
+        fontWeight: '900',
     },
     rightSection: {
         flexDirection: 'row',
@@ -133,23 +125,22 @@ const styles = StyleSheet.create({
     iconButton: {
         width: 44,
         height: 44,
-        borderRadius: 14,
-        backgroundColor: theme.colors.white,
+        borderRadius: 15,
         justifyContent: 'center',
         alignItems: 'center',
-        marginRight: 12,
-        ...theme.shadows.light,
+        marginRight: 10,
+        elevation: 2,
     },
     badge: {
         position: 'absolute',
         top: 12,
         right: 12,
-        width: 10,
-        height: 10,
-        borderRadius: 5,
-        backgroundColor: theme.colors.error,
-        borderWidth: 2,
-        borderColor: theme.colors.white,
+        width: 8,
+        height: 8,
+        borderRadius: 4,
+        backgroundColor: '#EF4444',
+        borderWidth: 1.5,
+        borderColor: '#FFF',
     },
     profileContainer: {
         width: 48,
@@ -159,20 +150,17 @@ const styles = StyleSheet.create({
     },
     glowRing: {
         position: 'absolute',
-        width: 56,
-        height: 56,
-        borderRadius: 28,
-        backgroundColor: theme.colors.primary,
+        width: 52,
+        height: 52,
+        borderRadius: 26,
     },
     avatar: {
-        width: 44,
-        height: 44,
-        borderRadius: 22,
-        backgroundColor: theme.colors.softBlue,
+        width: 40,
+        height: 40,
+        borderRadius: 20,
         justifyContent: 'center',
         alignItems: 'center',
         borderWidth: 2,
-        borderColor: theme.colors.white,
         zIndex: 1,
     },
 });

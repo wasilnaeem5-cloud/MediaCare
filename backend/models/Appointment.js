@@ -11,8 +11,16 @@ const appointmentSchema = new mongoose.Schema(
             type: String,
             required: [true, 'Please add a doctor name'],
         },
+        doctorSpec: {
+            type: String,
+            default: 'General Physician'
+        },
+        doctorAvatar: {
+            type: String,
+            default: 'https://cdn-icons-png.flaticon.com/512/3774/3774299.png'
+        },
         date: {
-            type: String, // String format YYYY-MM-DD for easier comparison
+            type: String, // String format YYYY-MM-DD
             required: [true, 'Please add a date'],
         },
         time: {
@@ -21,18 +29,25 @@ const appointmentSchema = new mongoose.Schema(
         },
         status: {
             type: String,
-            enum: ['Booked', 'Cancelled', 'Completed', 'Rescheduled'],
-            default: 'Booked',
+            enum: ['Scheduled', 'Cancelled', 'Completed', 'Rescheduled'],
+            default: 'Scheduled',
+        },
+        type: {
+            type: String,
+            enum: ['Consultation', 'Follow-up', 'Routine Checkup', 'Emergency'],
+            default: 'Consultation'
+        },
+        notes: {
+            type: String
         },
         cancelledAt: {
             type: Date,
         },
-        rescheduledFrom: {
-            type: String, // Previous date
-        },
-        rescheduledTimeFrom: {
-            type: String, // Previous time
-        },
+        rescheduleHistory: [{
+            date: String,
+            time: String,
+            updatedAt: { type: Date, default: Date.now }
+        }]
     },
     {
         timestamps: true,

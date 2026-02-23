@@ -47,10 +47,13 @@ export const AuthProvider = ({ children }) => {
 
     const logout = async () => {
         try {
-            await storage.clearAll();
+            // Update state first for instant UI response
             setUserToken(null);
             setUser(null);
-            console.log('[AuthContext] Logout successful, state cleared');
+
+            // Then clear storage in background
+            await storage.clearAll();
+            console.log('[AuthContext] Logout successful, state and storage cleared');
         } catch (error) {
             console.error('[AuthContext] Logout error', error);
         }

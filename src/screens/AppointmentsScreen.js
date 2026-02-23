@@ -2,7 +2,6 @@ import { useFocusEffect } from '@react-navigation/native';
 import { Calendar as CalendarIcon, Clock, User, X } from 'lucide-react-native';
 import { useCallback, useState } from 'react';
 import {
-  ActivityIndicator,
   Alert,
   FlatList,
   Modal,
@@ -18,21 +17,22 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import Card from '../components/Card';
 import CustomButton from '../components/CustomButton';
 import Header from '../components/Header';
+import Skeleton from '../components/Skeleton';
 import api from '../services/api';
-import { theme } from '../utils/theme';
+import { useTheme } from '../utils/ThemeContext';
 
 const timeSlots = [
   '09:00 AM', '10:00 AM', '11:00 AM', '01:00 PM', '02:00 PM', '03:00 PM', '04:00 PM'
 ];
 
 const AppointmentsScreen = ({ navigation }) => {
+  const { theme, isDarkMode } = useTheme();
   const [activeTab, setActiveTab] = useState('Upcoming');
   const [appointments, setAppointments] = useState([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [actionLoading, setActionLoading] = useState(false);
 
-  // Reschedule Modal State
   const [showReschedule, setShowReschedule] = useState(false);
   const [selectedApt, setSelectedApt] = useState(null);
   const [newDate, setNewDate] = useState('');
@@ -45,7 +45,6 @@ const AppointmentsScreen = ({ navigation }) => {
       const response = await api.get(endpoint);
       setAppointments(response.data || []);
     } catch (error) {
-      console.error('[Appointments Error]', error);
       setAppointments([]);
     } finally {
       setLoading(false);
@@ -65,29 +64,24 @@ const AppointmentsScreen = ({ navigation }) => {
   };
 
   const handleCancel = (id) => {
-    Alert.alert(
-      'Cancel Appointment',
-      'Are you sure you want to cancel this appointment?',
-      [
-        { text: 'No', style: 'cancel' },
-        {
-          text: 'Yes, Cancel',
-          style: 'destructive',
-          onPress: async () => {
-            try {
-              setActionLoading(true);
-              await api.patch(`/appointments/${id}/cancel`);
-              Alert.alert('Success', 'Appointment cancelled successfully');
-              fetchAppointments();
-            } catch (error) {
-              Alert.alert('Error', error.response?.data?.message || 'Failed to cancel');
-            } finally {
-              setActionLoading(false);
-            }
+    Alert.alert('Cancel?', 'Delete this appointment?', [
+      { text: 'No', style: 'cancel' },
+      {
+        text: 'Yes, Cancel',
+        style: 'destructive',
+        onPress: async () => {
+          try {
+            setActionLoading(true);
+            await api.patch(`/appointments/${id}/cancel`);
+            fetchAppointments();
+          } catch (error) {
+            Alert.alert('Error', 'Failed to cancel');
+          } finally {
+            setActionLoading(false);
           }
         }
-      ]
-    );
+      }
+    ]);
   };
 
   const openReschedule = (apt) => {
@@ -98,431 +92,191 @@ const AppointmentsScreen = ({ navigation }) => {
   };
 
   const handleReschedule = async () => {
-    if (!newDate || !newTime) {
-      Alert.alert('Error', 'Please select both date and time');
-      return;
-    }
-
     try {
       setActionLoading(true);
-      await api.patch(`/appointments/${selectedApt._id}/reschedule`, {
-        date: newDate,
-        time: newTime
-      });
+      await api.patch(`/appointments/${selectedApt._id}/reschedule`, { date: newDate, time: newTime });
       setShowReschedule(false);
-      Alert.alert('Success', 'Appointment rescheduled successfully');
       fetchAppointments();
     } catch (error) {
-      Alert.alert('Error', error.response?.data?.message || 'Failed to reschedule');
+      Alert.alert('Error', 'Failed to reschedule');
     } finally {
       setActionLoading(false);
     }
   };
 
-  const getStatusStyles = (status) => {
-    switch (status) {
-      case 'Booked':
-        return { bg: '#E0E7FF', text: '#4338CA' }; // Purple-ish
-      case 'Rescheduled':
-        return { bg: '#DBEAFE', text: '#1D4ED8' }; // Blue
-      case 'Cancelled':
-        return { bg: '#FEE2E2', text: '#B91C1C' }; // Red
-      case 'Completed':
-        return { bg: '#D1FAE5', text: '#047857' }; // Green
-      default:
-        return { bg: '#F3F4F6', text: '#374151' };
-    }
-  };
-
-  const renderAppointmentItem = ({ item }) => {
-    const { bg, text } = getStatusStyles(item.status);
-
+  const StatusBadge = ({ status }) => {
+    const colors = {
+      Scheduled: { bg: 'rgba(99, 102, 241, 0.1)', text: '#6366F1' },
+      Rescheduled: { bg: 'rgba(59, 130, 246, 0.1)', text: '#3B82F6' },
+      Cancelled: { bg: 'rgba(239, 68, 68, 0.1)', text: '#EF4444' },
+      Completed: { bg: 'rgba(16, 185, 129, 0.1)', text: '#10B981' },
+    };
+    const style = colors[status] || colors.Scheduled;
     return (
-      <Card style={styles.card}>
-        <View style={styles.cardHeader}>
-          <View style={styles.docInfo}>
-            <View style={styles.avatar}>
-              <User size={24} color={theme.colors.primary} />
-            </View>
-            <View>
-              <Text style={styles.docName}>{item.doctorName}</Text>
-              <Text style={styles.specialty}>Medical Specialist</Text>
-            </View>
-          </View>
-          <View style={[styles.statusBadge, { backgroundColor: bg }]}>
-            <Text style={[styles.statusText, { color: text }]}>{item.status}</Text>
-          </View>
-        </View>
-
-        <View style={styles.divider} />
-
-        <View style={styles.details}>
-          <View style={styles.detailItem}>
-            <CalendarIcon size={18} color={theme.colors.textSecondary} />
-            <Text style={styles.detailText}>{item.date}</Text>
-          </View>
-          <View style={styles.detailItem}>
-            <Clock size={18} color={theme.colors.textSecondary} />
-            <Text style={styles.detailText}>{item.time}</Text>
-          </View>
-        </View>
-
-        {activeTab === 'Upcoming' && item.status !== 'Cancelled' && (
-          <View style={styles.actions}>
-            <TouchableOpacity
-              style={[styles.rescheduleBtn, actionLoading && { opacity: 0.5 }]}
-              onPress={() => openReschedule(item)}
-              disabled={actionLoading}
-            >
-              <Text style={styles.rescheduleText}>Reschedule</Text>
-            </TouchableOpacity>
-            <TouchableOpacity
-              style={[styles.cancelBtn, actionLoading && { opacity: 0.5 }]}
-              onPress={() => handleCancel(item._id)}
-              disabled={actionLoading}
-            >
-              <Text style={styles.cancelText}>Cancel</Text>
-            </TouchableOpacity>
-          </View>
-        )}
-      </Card>
+      <View style={[styles.badge, { backgroundColor: style.bg }]}>
+        <Text style={[styles.badgeText, { color: style.text }]}>{status}</Text>
+      </View>
     );
   };
 
-  return (
-    <SafeAreaView style={styles.container}>
-      <Header title="My Appointments" showProfile={false} />
-
-      <View style={styles.tabContainer}>
-        {['Upcoming', 'Past'].map(tab => (
-          <TouchableOpacity
-            key={tab}
-            style={[styles.tab, activeTab === tab && styles.activeTab]}
-            onPress={() => setActiveTab(tab)}
-          >
-            <Text style={[styles.tabText, activeTab === tab && styles.activeTabText]}>
-              {tab === 'Past' ? 'History' : tab}
-            </Text>
-          </TouchableOpacity>
-        ))}
+  const renderItem = ({ item }) => (
+    <Card style={[styles.card, { backgroundColor: theme.colors.surface }]}>
+      <View style={styles.cardHeader}>
+        <View style={[styles.avatarBox, { backgroundColor: theme.colors.softBlue }]}>
+          <User size={20} color={theme.colors.primary} />
+        </View>
+        <View style={{ flex: 1, marginLeft: 12 }}>
+          <Text style={[styles.docName, { color: theme.colors.text }]}>{item.doctorName}</Text>
+          <Text style={styles.docSpec}>{item.doctorSpec || 'Specialist'}</Text>
+        </View>
+        <StatusBadge status={item.status} />
       </View>
-
-      {loading ? (
-        <View style={styles.centerContainer}>
-          <ActivityIndicator size="large" color={theme.colors.primary} />
+      <View style={[styles.divider, { backgroundColor: theme.colors.border }]} />
+      <View style={styles.cardFooter}>
+        <View style={styles.infoRow}>
+          <CalendarIcon size={14} color={theme.colors.primary} />
+          <Text style={[styles.infoText, { color: theme.colors.text }]}>{item.date}</Text>
+          <Clock size={14} color={theme.colors.primary} style={{ marginLeft: 15 }} />
+          <Text style={[styles.infoText, { color: theme.colors.text }]}>{item.time}</Text>
         </View>
-      ) : (
-        <FlatList
-          data={appointments}
-          keyExtractor={item => item._id}
-          renderItem={renderAppointmentItem}
-          contentContainerStyle={styles.listContent}
-          refreshControl={
-            <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
-          }
-          ListEmptyComponent={
-            <View style={styles.emptyState}>
-              <CalendarIcon size={64} color={theme.colors.border} />
-              <Text style={styles.emptyText}>No {activeTab.toLowerCase()} appointments found</Text>
-            </View>
-          }
-        />
-      )}
-
-      <TouchableOpacity
-        style={styles.fab}
-        onPress={() => navigation.navigate('ScheduleAppointment')}
-      >
-        <Text style={styles.fabText}>+ Book New</Text>
-      </TouchableOpacity>
-
-      {/* Reschedule Modal */}
-      <Modal
-        visible={showReschedule}
-        animationType="slide"
-        transparent={true}
-        onRequestClose={() => setShowReschedule(false)}
-      >
-        <View style={styles.modalOverlay}>
-          <View style={styles.modalContent}>
-            <View style={styles.modalHeader}>
-              <Text style={styles.modalTitle}>Reschedule Appointment</Text>
-              <TouchableOpacity onPress={() => setShowReschedule(false)}>
-                <X size={24} color={theme.colors.text} />
-              </TouchableOpacity>
-            </View>
-
-            <ScrollView showsVerticalScrollIndicator={false}>
-              <Text style={styles.modalSubtitle}>Select New Date</Text>
-              <CalendarPicker
-                onDayPress={day => setNewDate(day.dateString)}
-                markedDates={{
-                  [newDate]: { selected: true, selectedColor: theme.colors.primary }
-                }}
-                minDate={new Date().toISOString().split('T')[0]}
-                theme={{
-                  selectedDayBackgroundColor: theme.colors.primary,
-                  todayTextColor: theme.colors.primary,
-                  arrowColor: theme.colors.primary,
-                }}
-                style={styles.calendar}
-              />
-
-              <Text style={styles.modalSubtitle}>Select New Time</Text>
-              <View style={styles.timeGrid}>
-                {timeSlots.map(time => (
-                  <TouchableOpacity
-                    key={time}
-                    style={[
-                      styles.timeSlot,
-                      newTime === time && styles.selectedTimeSlot
-                    ]}
-                    onPress={() => setNewTime(time)}
-                  >
-                    <Text style={[
-                      styles.timeText,
-                      newTime === time && styles.selectedTimeText
-                    ]}>{time}</Text>
-                  </TouchableOpacity>
-                ))}
-              </View>
-
-              <CustomButton
-                title="Confirm Reschedule"
-                onPress={handleReschedule}
-                loading={actionLoading}
-                style={styles.confirmBtn}
-              />
-            </ScrollView>
+        {activeTab === 'Upcoming' && item.status !== 'Cancelled' && (
+          <View style={styles.actions}>
+            <TouchableOpacity onPress={() => openReschedule(item)} style={styles.actionBtn}>
+              <Text style={[styles.actionText, { color: theme.colors.primary }]}>Reschedule</Text>
+            </TouchableOpacity>
+            <TouchableOpacity onPress={() => handleCancel(item._id)} style={styles.actionBtn}>
+              <Text style={[styles.actionText, { color: theme.colors.error }]}>Cancel</Text>
+            </TouchableOpacity>
           </View>
+        )}
+      </View>
+    </Card>
+  );
+
+  return (
+    <View style={[styles.container, { backgroundColor: theme.colors.background }]}>
+      <SafeAreaView style={{ flex: 1 }}>
+        <Header title="Appointments" showProfile={false} />
+
+        <View style={styles.tabBar}>
+          {['Upcoming', 'Past'].map(tab => (
+            <TouchableOpacity
+              key={tab}
+              onPress={() => setActiveTab(tab)}
+              style={[styles.tab, activeTab === tab && { backgroundColor: theme.colors.primary }]}
+            >
+              <Text style={[styles.tabLabel, { color: theme.colors.textSecondary }, activeTab === tab && { color: '#FFF' }]}>{tab}</Text>
+            </TouchableOpacity>
+          ))}
         </View>
-      </Modal>
-    </SafeAreaView>
+
+        {loading ? (
+          <View style={{ padding: 20 }}>
+            <Skeleton width="100%" height={150} style={{ marginBottom: 15 }} />
+            <Skeleton width="100%" height={150} />
+          </View>
+        ) : (
+          <FlatList
+            data={appointments}
+            keyExtractor={item => item._id}
+            renderItem={renderItem}
+            contentContainerStyle={{ padding: 20, paddingBottom: 100 }}
+            refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
+            ListEmptyComponent={
+              <View style={styles.empty}>
+                <View style={[styles.emptyIconBox, { backgroundColor: theme.colors.surface }]}>
+                  <CalendarIcon size={40} color={theme.colors.primary} />
+                </View>
+                <Text style={[styles.emptyText, { color: theme.colors.text }]}>No {activeTab.toLowerCase()} appointments</Text>
+                <Text style={styles.emptySub}>Schedule a checkup with our world-class specialists.</Text>
+                <TouchableOpacity
+                  style={[styles.emptyBtn, { backgroundColor: theme.colors.primary }]}
+                  onPress={() => navigation.navigate('ScheduleAppointment')}
+                >
+                  <Text style={styles.emptyBtnText}>Book Appointment</Text>
+                </TouchableOpacity>
+              </View>
+            }
+          />
+        )}
+
+        <TouchableOpacity
+          style={[styles.fab, { backgroundColor: theme.colors.primary }]}
+          onPress={() => navigation.navigate('ScheduleAppointment')}
+          activeOpacity={0.8}
+        >
+          <CalendarIcon size={24} color="#FFF" />
+        </TouchableOpacity>
+
+        {/* Reschedule Modal (Polished) */}
+        <Modal visible={showReschedule} animationType="slide" transparent>
+          <View style={styles.modalOverlay}>
+            <View style={[styles.modalBox, { backgroundColor: theme.colors.surface }]}>
+              <View style={styles.modalHeader}>
+                <Text style={[styles.modalTitle, { color: theme.colors.text }]}>Reschedule</Text>
+                <TouchableOpacity onPress={() => setShowReschedule(false)}><X size={24} color={theme.colors.text} /></TouchableOpacity>
+              </View>
+              <ScrollView>
+                <CalendarPicker
+                  onDayPress={d => setNewDate(d.dateString)}
+                  markedDates={{ [newDate]: { selected: true, selectedColor: theme.colors.primary } }}
+                  theme={{
+                    calendarBackground: 'transparent',
+                    dayTextColor: theme.colors.text,
+                    monthTextColor: theme.colors.text,
+                    arrowColor: theme.colors.primary,
+                  }}
+                />
+                <View style={styles.timeGrid}>
+                  {timeSlots.map(t => (
+                    <TouchableOpacity key={t} onPress={() => setNewTime(t)} style={[styles.tSlot, newTime === t && { backgroundColor: theme.colors.primary }]}>
+                      <Text style={[styles.tText, { color: theme.colors.text }, newTime === t && { color: '#FFF' }]}>{t}</Text>
+                    </TouchableOpacity>
+                  ))}
+                </View>
+                <CustomButton title="Save Changes" onPress={handleReschedule} loading={actionLoading} style={{ marginTop: 20 }} />
+              </ScrollView>
+            </View>
+          </View>
+        </Modal>
+      </SafeAreaView>
+    </View>
   );
 };
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: theme.colors.background,
-  },
-  tabContainer: {
-    flexDirection: 'row',
-    paddingHorizontal: theme.spacing.lg,
-    marginVertical: theme.spacing.md,
-  },
-  tab: {
-    paddingVertical: theme.spacing.sm,
-    paddingHorizontal: theme.spacing.lg,
-    marginRight: theme.spacing.md,
-    borderRadius: theme.borderRadius.full,
-    backgroundColor: theme.colors.white,
-    borderWidth: 1,
-    borderColor: theme.colors.border,
-  },
-  activeTab: {
-    backgroundColor: theme.colors.primary,
-    borderColor: theme.colors.primary,
-  },
-  tabText: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: theme.colors.textSecondary,
-  },
-  activeTabText: {
-    color: theme.colors.white,
-  },
-  listContent: {
-    padding: theme.spacing.lg,
-    paddingBottom: 100,
-  },
-  card: {
-    padding: theme.spacing.md,
-    marginBottom: theme.spacing.md,
-  },
-  cardHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'flex-start',
-  },
-  docInfo: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    flex: 1,
-  },
-  avatar: {
-    width: 44,
-    height: 44,
-    borderRadius: 12,
-    backgroundColor: theme.colors.softBlue,
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginRight: theme.spacing.md,
-  },
-  docName: {
-    fontSize: 16,
-    fontWeight: '700',
-    color: theme.colors.text,
-  },
-  specialty: {
-    fontSize: 13,
-    color: theme.colors.textSecondary,
-  },
-  statusBadge: {
-    paddingHorizontal: theme.spacing.sm,
-    paddingVertical: 4,
-    borderRadius: 6,
-  },
-  statusText: {
-    fontSize: 11,
-    fontWeight: '700',
-  },
-  divider: {
-    height: 1,
-    backgroundColor: theme.colors.border,
-    marginVertical: theme.spacing.md,
-  },
-  details: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-  },
-  detailItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  detailText: {
-    fontSize: 14,
-    color: theme.colors.text,
-    marginLeft: theme.spacing.xs,
-    fontWeight: '500',
-  },
-  actions: {
-    flexDirection: 'row',
-    marginTop: theme.spacing.lg,
-    justifyContent: 'space-between',
-  },
-  rescheduleBtn: {
-    flex: 1,
-    paddingVertical: theme.spacing.sm,
-    backgroundColor: theme.colors.softBlue,
-    borderRadius: theme.borderRadius.sm,
-    alignItems: 'center',
-    marginRight: theme.spacing.sm,
-  },
-  rescheduleText: {
-    color: theme.colors.primary,
-    fontWeight: '700',
-    fontSize: 14,
-  },
-  cancelBtn: {
-    flex: 1,
-    paddingVertical: theme.spacing.sm,
-    backgroundColor: theme.colors.softRed,
-    borderRadius: theme.borderRadius.sm,
-    alignItems: 'center',
-  },
-  cancelText: {
-    color: theme.colors.error,
-    fontWeight: '700',
-    fontSize: 14,
-  },
-  centerContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  emptyState: {
-    alignItems: 'center',
-    marginTop: 100,
-  },
-  emptyText: {
-    fontSize: 16,
-    color: theme.colors.textSecondary,
-    marginTop: theme.spacing.md,
-  },
-  fab: {
-    position: 'absolute',
-    bottom: 30,
-    right: 24,
-    backgroundColor: theme.colors.primary,
-    paddingHorizontal: 24,
-    paddingVertical: 14,
-    borderRadius: 30,
-    ...theme.shadows.medium,
-    elevation: 8,
-  },
-  fabText: {
-    color: theme.colors.white,
-    fontWeight: '800',
-    fontSize: 16,
-  },
-  // Modal Styles
-  modalOverlay: {
-    flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.5)',
-    justifyContent: 'flex-end',
-  },
-  modalContent: {
-    backgroundColor: theme.colors.white,
-    borderTopLeftRadius: 30,
-    borderTopRightRadius: 30,
-    padding: theme.spacing.lg,
-    maxHeight: '85%',
-  },
-  modalHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: theme.spacing.lg,
-  },
-  modalTitle: {
-    fontSize: 20,
-    fontWeight: '800',
-    color: theme.colors.text,
-  },
-  modalSubtitle: {
-    fontSize: 16,
-    fontWeight: '700',
-    color: theme.colors.text,
-    marginTop: theme.spacing.md,
-    marginBottom: theme.spacing.sm,
-  },
-  calendar: {
-    borderRadius: theme.borderRadius.md,
-    marginBottom: theme.spacing.md,
-    ...theme.shadows.light,
-  },
-  timeGrid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    justifyContent: 'space-between',
-  },
-  timeSlot: {
-    width: '31%',
-    backgroundColor: theme.colors.background,
-    paddingVertical: theme.spacing.sm,
-    borderRadius: theme.borderRadius.sm,
-    alignItems: 'center',
-    marginBottom: theme.spacing.sm,
-    borderWidth: 1,
-    borderColor: theme.colors.border,
-  },
-  selectedTimeSlot: {
-    backgroundColor: theme.colors.primary,
-    borderColor: theme.colors.primary,
-  },
-  timeText: {
-    fontSize: 13,
-    fontWeight: '600',
-    color: theme.colors.text,
-  },
-  selectedTimeText: {
-    color: theme.colors.white,
-  },
-  confirmBtn: {
-    marginTop: theme.spacing.xl,
-    marginBottom: theme.spacing.lg,
-  }
+  container: { flex: 1 },
+  tabBar: { flexDirection: 'row', padding: 20, paddingTop: 10 },
+  tab: { paddingHorizontal: 20, paddingVertical: 8, borderRadius: 12, marginRight: 10 },
+  tabLabel: { fontSize: 14, fontWeight: '800' },
+  card: { padding: 16, borderRadius: 24, marginBottom: 16 },
+  cardHeader: { flexDirection: 'row', alignItems: 'center' },
+  avatarBox: { width: 44, height: 44, borderRadius: 14, justifyContent: 'center', alignItems: 'center' },
+  docName: { fontSize: 16, fontWeight: '800' },
+  docSpec: { fontSize: 13, color: '#94A3B8' },
+  badge: { paddingHorizontal: 10, paddingVertical: 4, borderRadius: 8 },
+  badgeText: { fontSize: 11, fontWeight: '800' },
+  divider: { height: 1, marginVertical: 15, opacity: 0.5 },
+  cardFooter: { marginTop: 5 },
+  infoRow: { flexDirection: 'row', alignItems: 'center' },
+  infoText: { fontSize: 13, fontWeight: '700', marginLeft: 6 },
+  actions: { flexDirection: 'row', marginTop: 15, justifyContent: 'flex-end' },
+  actionBtn: { marginLeft: 20, padding: 5 },
+  actionText: { fontSize: 13, fontWeight: '800' },
+  empty: { alignItems: 'center', marginTop: 80, paddingHorizontal: 40 },
+  emptyIconBox: { width: 80, height: 80, borderRadius: 25, justifyContent: 'center', alignItems: 'center', marginBottom: 20, elevation: 2, shadowColor: '#000', shadowOpacity: 0.05, shadowRadius: 10 },
+  emptyText: { fontSize: 18, fontWeight: '800', textAlign: 'center' },
+  emptySub: { fontSize: 14, color: '#94A3B8', textAlign: 'center', marginTop: 8, lineHeight: 20 },
+  emptyBtn: { marginTop: 25, paddingHorizontal: 30, paddingVertical: 15, borderRadius: 15, elevation: 4, shadowColor: '#000', shadowOpacity: 0.1, shadowRadius: 10 },
+  emptyBtnText: { color: '#FFF', fontWeight: '800', fontSize: 15 },
+  fab: { position: 'absolute', bottom: 95, right: 25, width: 60, height: 60, borderRadius: 20, justifyContent: 'center', alignItems: 'center', elevation: 8, shadowColor: '#000', shadowOpacity: 0.2, shadowRadius: 15 },
+  modalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.6)', justifyContent: 'flex-end' },
+  modalBox: { borderTopLeftRadius: 30, borderTopRightRadius: 30, padding: 25, maxHeight: '80%' },
+  modalHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 },
+  modalTitle: { fontSize: 20, fontWeight: '900' },
+  timeGrid: { flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'space-between', marginTop: 20 },
+  tSlot: { width: '31%', paddingVertical: 10, borderRadius: 12, alignItems: 'center', marginBottom: 10, borderWidth: 1, borderColor: 'rgba(0,0,0,0.1)' },
+  tText: { fontSize: 12, fontWeight: '700' }
 });
 
 export default AppointmentsScreen;

@@ -1,7 +1,8 @@
 import { StyleSheet, TouchableOpacity, View } from 'react-native';
-import { theme } from '../utils/theme';
+import { useTheme } from '../utils/ThemeContext';
 
 const Card = ({ children, style, onPress, variant = 'elevated' }) => {
+    const { theme } = useTheme();
     const Container = onPress ? TouchableOpacity : View;
 
     return (
@@ -10,8 +11,9 @@ const Card = ({ children, style, onPress, variant = 'elevated' }) => {
             onPress={onPress}
             style={[
                 styles.card,
-                variant === 'elevated' && styles.elevated,
-                variant === 'outline' && styles.outline,
+                { backgroundColor: theme.colors.surface },
+                variant === 'elevated' && theme.shadows.light,
+                variant === 'outline' && { borderWidth: 1, borderColor: theme.colors.border },
                 style,
             ]}
         >
@@ -22,17 +24,9 @@ const Card = ({ children, style, onPress, variant = 'elevated' }) => {
 
 const styles = StyleSheet.create({
     card: {
-        backgroundColor: theme.colors.white,
-        borderRadius: theme.borderRadius.lg,
-        padding: theme.spacing.md,
-        marginBottom: theme.spacing.md,
-    },
-    elevated: {
-        ...theme.shadows.light,
-    },
-    outline: {
-        borderWidth: 1,
-        borderColor: theme.colors.border,
+        borderRadius: 24,
+        padding: 16,
+        marginBottom: 16,
     },
 });
 

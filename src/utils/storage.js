@@ -48,5 +48,20 @@ export const storage = {
     } catch (error) {
       console.error('Error clearing storage', error);
     }
+  },
+  saveThemePreference: async (theme) => {
+    try {
+      await AsyncStorage.setItem('@medicare_theme', theme);
+    } catch (error) {
+      console.error('Error saving theme', error);
+    }
+  },
+  getThemePreference: async () => {
+    try {
+      return await AsyncStorage.getItem('@medicare_theme');
+    } catch (error) {
+      console.error('Error getting theme', error);
+      return 'light';
+    }
   }
 };

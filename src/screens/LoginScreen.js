@@ -27,7 +27,7 @@ import CustomButton from '../components/CustomButton';
 import CustomInput from '../components/CustomInput';
 import api from '../services/api';
 import { useAuth } from '../utils/AuthContext';
-import { theme } from '../utils/theme';
+import { useTheme } from '../utils/ThemeContext';
 
 const { width, height } = Dimensions.get('window');
 
@@ -54,12 +54,12 @@ const FloatingBlob = ({ color, size, top, left, duration, delay }) => {
 };
 
 const LoginScreen = ({ navigation }) => {
+    const { theme, isDarkMode } = useTheme();
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
     const [loading, setLoading] = useState(false);
     const { login } = useAuth();
 
-    // Animation Shared Values
     const formOpacity = useSharedValue(0);
     const formTranslateY = useSharedValue(40);
     const shakeTranslateX = useSharedValue(0);
@@ -90,7 +90,7 @@ const LoginScreen = ({ navigation }) => {
     const handleLogin = async () => {
         if (!email || !password) {
             triggerShake();
-            Alert.alert('Empty Fields', 'Please enter your email and password to safely sign in.');
+            Alert.alert('Selection Required', 'Please enter your email and password.');
             return;
         }
 
@@ -100,95 +100,62 @@ const LoginScreen = ({ navigation }) => {
                 email: email.trim().toLowerCase(),
                 password
             });
-
             const { token, ...userData } = response.data;
-
             if (token) {
                 await login(token, userData);
-            } else {
-                throw new Error('No token received');
             }
         } catch (error) {
             triggerShake();
-            const message = error.response?.data?.message || 'Invalid email or password. Please try again.';
-            Alert.alert('Login Failed', message);
+            Alert.alert('Login Failed', error.response?.data?.message || 'Check your credentials.');
         } finally {
             setLoading(false);
         }
     };
 
     return (
-        <View style={styles.container}>
+        <View style={[styles.container, { backgroundColor: theme.colors.background }]}>
             <LinearGradient
-                colors={['#F5F3FF', '#EDE9FE', '#DDD6FE']}
+                colors={isDarkMode ? ['#0F172A', '#1E293B', '#111827'] : ['#F5F3FF', '#EDE9FE', '#DDD6FE']}
                 style={StyleSheet.absoluteFill}
             />
 
-            <FloatingBlob color="rgba(94, 96, 206, 0.08)" size={300} top={-50} left={-50} duration={6000} delay={0} />
-            <FloatingBlob color="rgba(72, 191, 227, 0.1)" size={200} top={height * 0.6} left={width - 150} duration={8000} delay={1000} />
+            <FloatingBlob color={isDarkMode ? 'rgba(99, 102, 241, 0.05)' : 'rgba(94, 96, 206, 0.08)'} size={300} top={-50} left={-50} duration={6000} delay={0} />
 
             <SafeAreaView style={{ flex: 1 }}>
-                <KeyboardAvoidingView
-                    behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-                    style={{ flex: 1 }}
-                >
-                    <ScrollView
-                        contentContainerStyle={styles.scrollContent}
-                        showsVerticalScrollIndicator={false}
-                    >
-                        <TouchableOpacity
-                            style={styles.backButton}
-                            onPress={() => navigation.goBack()}
-                        >
+                <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} style={{ flex: 1 }}>
+                    <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
+                        <TouchableOpacity style={[styles.backButton, { backgroundColor: theme.colors.surface }]} onPress={() => navigation.goBack()}>
                             <ArrowLeft color={theme.colors.primary} size={28} />
                         </TouchableOpacity>
 
                         <Animated.View style={[styles.header, formAnimatedStyle]}>
-                            <View style={styles.iconCircle}>
+                            <View style={[styles.iconCircle, { backgroundColor: theme.colors.surface }]}>
                                 <Heart size={32} fill={theme.colors.primary} color={theme.colors.primary} />
                             </View>
-                            <Text style={styles.title}>Welcome Back</Text>
-                            <Text style={styles.subtitle}>We're here to help you stay on track</Text>
+                            <Text style={[styles.title, { color: theme.colors.text }]}>Welcome Back</Text>
+                            <Text style={styles.subtitle}>Log in to manage your health journey</Text>
                         </Animated.View>
 
                         <Animated.View style={[styles.form, formAnimatedStyle]}>
-                            <CustomInput
-                                label="Email Address"
-                                value={email}
-                                onChangeText={setEmail}
-                                icon={Mail}
-                                keyboardType="email-address"
-                                autoCapitalize="none"
-                            />
-
-                            <CustomInput
-                                label="Password"
-                                value={password}
-                                onChangeText={setPassword}
-                                icon={Lock}
-                                secureTextEntry
-                            />
+                            <CustomInput label="Email" value={email} onChangeText={setEmail} icon={Mail} keyboardType="email-address" />
+                            <CustomInput label="Password" value={password} onChangeText={setPassword} icon={Lock} secureTextEntry />
 
                             <TouchableOpacity style={styles.forgotPassword}>
-                                <Text style={styles.forgotPasswordText}>Forgot password?</Text>
+                                <Text style={[styles.forgotPasswordText, { color: theme.colors.primary }]}>Forgot password?</Text>
                             </TouchableOpacity>
 
-                            <CustomButton
-                                title="Sign In"
-                                onPress={handleLogin}
-                                loading={loading}
-                            />
+                            <CustomButton title="Sign In" onPress={handleLogin} loading={loading} />
 
                             <View style={styles.securitySeal}>
-                                <ShieldCheck size={16} color={theme.colors.textSecondary} />
-                                <Text style={styles.securityText}>Your health data is encrypted and secure 🔒</Text>
+                                <ShieldCheck size={16} color="#94A3B8" />
+                                <Text style={styles.securityText}>Secure authentication with 256-bit encryption</Text>
                             </View>
                         </Animated.View>
 
                         <Animated.View style={[styles.footer, formAnimatedStyle]}>
                             <Text style={styles.footerText}>New to MediCare? </Text>
                             <TouchableOpacity onPress={() => navigation.navigate('SignUp')}>
-                                <Text style={styles.footerLink}>Create Account</Text>
+                                <Text style={[styles.footerLink, { color: theme.colors.primary }]}>Create Account</Text>
                             </TouchableOpacity>
                         </Animated.View>
                     </ScrollView>
@@ -199,96 +166,22 @@ const LoginScreen = ({ navigation }) => {
 };
 
 const styles = StyleSheet.create({
-    container: {
-        flex: 1,
-    },
-    blob: {
-        position: 'absolute',
-    },
-    scrollContent: {
-        flexGrow: 1,
-        paddingHorizontal: theme.spacing.xl,
-        paddingBottom: theme.spacing.xl,
-    },
-    backButton: {
-        width: 48,
-        height: 48,
-        borderRadius: 14,
-        backgroundColor: theme.colors.white,
-        justifyContent: 'center',
-        alignItems: 'center',
-        marginTop: 10,
-        marginBottom: 20,
-        ...theme.shadows.light,
-    },
-    header: {
-        alignItems: 'center',
-        marginBottom: 40,
-    },
-    iconCircle: {
-        width: 72,
-        height: 72,
-        borderRadius: 24,
-        backgroundColor: theme.colors.white,
-        justifyContent: 'center',
-        alignItems: 'center',
-        marginBottom: 20,
-        ...theme.shadows.light,
-    },
-    title: {
-        fontSize: 32,
-        fontWeight: '900',
-        color: theme.colors.text,
-        textAlign: 'center',
-    },
-    subtitle: {
-        fontSize: 16,
-        color: theme.colors.textSecondary,
-        textAlign: 'center',
-        marginTop: 8,
-        fontWeight: '500',
-    },
-    form: {
-        width: '100%',
-    },
-    forgotPassword: {
-        alignSelf: 'flex-end',
-        marginBottom: 30,
-    },
-    forgotPasswordText: {
-        color: theme.colors.primary,
-        fontWeight: '700',
-        fontSize: 14,
-    },
-    securitySeal: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        justifyContent: 'center',
-        marginTop: 24,
-    },
-    securityText: {
-        fontSize: 12,
-        color: theme.colors.textSecondary,
-        marginLeft: 6,
-        fontWeight: '500',
-    },
-    footer: {
-        flexDirection: 'row',
-        justifyContent: 'center',
-        marginTop: 'auto',
-        paddingVertical: 30,
-    },
-    footerText: {
-        color: theme.colors.textSecondary,
-        fontSize: 15,
-        fontWeight: '500',
-    },
-    footerLink: {
-        color: theme.colors.primary,
-        fontWeight: '800',
-        fontSize: 15,
-        textDecorationLine: 'underline',
-    },
+    container: { flex: 1 },
+    blob: { position: 'absolute' },
+    scrollContent: { flexGrow: 1, paddingHorizontal: 25, paddingBottom: 30 },
+    backButton: { width: 48, height: 48, borderRadius: 15, justifyContent: 'center', alignItems: 'center', marginTop: 10, elevation: 2 },
+    header: { alignItems: 'center', marginBottom: 40, marginTop: 20 },
+    iconCircle: { width: 80, height: 80, borderRadius: 28, justifyContent: 'center', alignItems: 'center', marginBottom: 20, elevation: 4 },
+    title: { fontSize: 32, fontWeight: '900', textAlign: 'center' },
+    subtitle: { fontSize: 16, color: '#94A3B8', textAlign: 'center', marginTop: 8, fontWeight: '500' },
+    form: { width: '100%' },
+    forgotPassword: { alignSelf: 'flex-end', marginBottom: 25 },
+    forgotPasswordText: { fontWeight: '700', fontSize: 14 },
+    securitySeal: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', marginTop: 25 },
+    securityText: { fontSize: 12, color: '#94A3B8', marginLeft: 8, fontWeight: '500' },
+    footer: { flexDirection: 'row', justifyContent: 'center', marginTop: 'auto', paddingVertical: 30 },
+    footerText: { color: '#94A3B8', fontSize: 15, fontWeight: '500' },
+    footerLink: { fontWeight: '800', fontSize: 15, textDecorationLine: 'underline' },
 });
 
 export default LoginScreen;

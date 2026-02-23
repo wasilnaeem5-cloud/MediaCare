@@ -7,7 +7,7 @@ import Animated, {
     withSequence,
     withTiming
 } from 'react-native-reanimated';
-import { theme } from '../utils/theme';
+import { useTheme } from '../utils/ThemeContext';
 
 const CustomButton = ({
     title,
@@ -18,6 +18,7 @@ const CustomButton = ({
     textStyle,
     icon: Icon
 }) => {
+    const { theme } = useTheme();
     const scale = useSharedValue(1);
     const isOutline = type === 'outline';
 
@@ -38,17 +39,18 @@ const CustomButton = ({
     const ButtonContent = () => (
         <View style={styles.content}>
             {loading ? (
-                <ActivityIndicator color={isOutline ? theme.colors.primary : theme.colors.white} />
+                <ActivityIndicator color={isOutline ? theme.colors.primary : "#FFF"} />
             ) : (
                 <>
                     <Text style={[
                         styles.text,
-                        isOutline && styles.outlineText,
+                        { color: "#FFF" },
+                        isOutline && { color: theme.colors.primary },
                         textStyle
                     ]}>
                         {title}
                     </Text>
-                    {Icon && <Icon size={20} color={theme.colors.white} style={styles.icon} />}
+                    {Icon && <Icon size={20} color="#FFF" style={styles.icon} />}
                 </>
             )}
         </View>
@@ -63,7 +65,7 @@ const CustomButton = ({
                 style={styles.touchable}
             >
                 {isOutline ? (
-                    <View style={[styles.button, styles.outlineButton]}>
+                    <View style={[styles.button, styles.outlineButton, { borderColor: theme.colors.primary }]}>
                         <ButtonContent />
                     </View>
                 ) : (
@@ -87,7 +89,6 @@ const styles = StyleSheet.create({
         height: 60,
         borderRadius: 20,
         overflow: 'hidden',
-        ...theme.shadows.medium,
     },
     touchable: {
         flex: 1,
@@ -101,7 +102,6 @@ const styles = StyleSheet.create({
     outlineButton: {
         backgroundColor: 'transparent',
         borderWidth: 2,
-        borderColor: theme.colors.primary,
     },
     content: {
         flexDirection: 'row',
@@ -109,12 +109,8 @@ const styles = StyleSheet.create({
         justifyContent: 'center',
     },
     text: {
-        color: theme.colors.white,
         fontSize: 18,
         fontWeight: '800',
-    },
-    outlineText: {
-        color: theme.colors.primary,
     },
     icon: {
         marginLeft: 10,

@@ -29,9 +29,10 @@ const bookAppointment = async (req, res) => {
         const appointment = await Appointment.create({
             userId: req.user._id,
             doctorName,
+            doctorSpec: req.body.doctorSpec || 'General Physician',
             date,
             time,
-            status: 'Booked'
+            status: 'Scheduled'
         });
 
         console.log('✅ Appointment Created:', appointment._id);

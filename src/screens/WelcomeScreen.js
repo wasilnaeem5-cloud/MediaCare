@@ -14,11 +14,12 @@ import Animated, {
     withTiming
 } from 'react-native-reanimated';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { theme } from '../utils/theme';
+import { useTheme } from '../utils/ThemeContext';
 
 const { width, height } = Dimensions.get('window');
 
 const FeatureItem = ({ icon: Icon, title, delay }) => {
+    const { theme } = useTheme();
     const opacity = useSharedValue(0);
     const translateY = useSharedValue(20);
 
@@ -34,10 +35,10 @@ const FeatureItem = ({ icon: Icon, title, delay }) => {
 
     return (
         <Animated.View style={[styles.featureItem, animatedStyle]}>
-            <View style={styles.featureIconContainer}>
+            <View style={[styles.featureIconContainer, { backgroundColor: theme.colors.primary + '1F' }]}>
                 <Icon size={20} color={theme.colors.primary} />
             </View>
-            <Text style={styles.featureText}>{title}</Text>
+            <Text style={[styles.featureText, { color: theme.colors.text }]}>{title}</Text>
         </Animated.View>
     );
 };
@@ -68,7 +69,7 @@ const FloatingBlob = ({ color, size, top, left, duration, delay }) => {
 };
 
 const WelcomeScreen = ({ navigation }) => {
-    // Animation Shared Values
+    const { theme, isDarkMode } = useTheme();
     const logoScale = useSharedValue(0.8);
     const logoOpacity = useSharedValue(0);
     const textOpacity = useSharedValue(0);
@@ -77,14 +78,10 @@ const WelcomeScreen = ({ navigation }) => {
     const buttonScale = useSharedValue(1);
 
     useEffect(() => {
-        // Entrance Animations
         logoScale.value = withSpring(1);
         logoOpacity.value = withTiming(1, { duration: 1000 });
-
         textOpacity.value = withDelay(400, withTiming(1, { duration: 800 }));
         textTranslateY.value = withDelay(400, withSpring(0));
-
-        // Pulsing Heartbeat (infinite)
         pulseScale.value = withRepeat(
             withSequence(
                 withTiming(1.1, { duration: 100, easing: Easing.out(Easing.quad) }),
@@ -127,22 +124,19 @@ const WelcomeScreen = ({ navigation }) => {
     };
 
     return (
-        <View style={styles.container}>
-            {/* Animated Background Gradients */}
+        <View style={[styles.container, { backgroundColor: theme.colors.background }]}>
             <LinearGradient
-                colors={['#EEF2FF', '#E0E7FF', '#C7D2FE']}
+                colors={isDarkMode ? ['#0F172A', '#1E293B', '#111827'] : ['#EEF2FF', '#E0E7FF', '#C7D2FE']}
                 style={StyleSheet.absoluteFill}
             />
 
-            {/* Floating Decorative Blobs */}
-            <FloatingBlob color="rgba(94, 96, 206, 0.1)" size={200} top={-50} left={-50} duration={4000} delay={0} />
-            <FloatingBlob color="rgba(72, 191, 227, 0.15)" size={150} top={height * 0.4} left={width - 100} duration={5000} delay={500} />
-            <FloatingBlob color="rgba(105, 48, 195, 0.1)" size={180} top={height - 100} left={-20} duration={6000} delay={1000} />
+            <FloatingBlob color={isDarkMode ? 'rgba(99, 102, 241, 0.05)' : 'rgba(94, 96, 206, 0.1)'} size={200} top={-50} left={-50} duration={4000} delay={0} />
+            <FloatingBlob color={isDarkMode ? 'rgba(72, 191, 227, 0.08)' : 'rgba(72, 191, 227, 0.15)'} size={150} top={height * 0.4} left={width - 100} duration={5000} delay={500} />
 
             <SafeAreaView style={styles.safeArea}>
                 <View style={styles.topContent}>
                     <Animated.View style={[styles.logoWrapper, logoAnimatedStyle]}>
-                        <View style={styles.iconCircle}>
+                        <View style={[styles.iconCircle, { backgroundColor: theme.colors.surface }]}>
                             <Animated.View style={heartPulseStyle}>
                                 <Heart size={64} fill={theme.colors.primary} color={theme.colors.primary} />
                             </Animated.View>
@@ -150,8 +144,8 @@ const WelcomeScreen = ({ navigation }) => {
                     </Animated.View>
 
                     <Animated.View style={[styles.textWrapper, textAnimatedStyle]}>
-                        <Text style={styles.title}>MediCare</Text>
-                        <Text style={styles.subtitle}>Smart Healthcare, Better Life</Text>
+                        <Text style={[styles.title, { color: theme.colors.text }]}>MediCare</Text>
+                        <Text style={[styles.subtitle, { color: theme.colors.primary }]}>Smart Healthcare, Better Life</Text>
                     </Animated.View>
 
                     <View style={styles.featuresContainer}>
@@ -167,11 +161,7 @@ const WelcomeScreen = ({ navigation }) => {
                     </Text>
 
                     <Animated.View style={[styles.buttonWrapper, buttonAnimatedStyle]}>
-                        <TouchableOpacity
-                            onPress={handleGetStarted}
-                            activeOpacity={0.9}
-                            style={styles.mainButton}
-                        >
+                        <TouchableOpacity onPress={handleGetStarted} activeOpacity={0.9} style={styles.mainButton}>
                             <LinearGradient
                                 colors={[theme.colors.primary, theme.colors.accent]}
                                 start={{ x: 0, y: 0 }}
@@ -180,18 +170,15 @@ const WelcomeScreen = ({ navigation }) => {
                             >
                                 <Text style={styles.buttonText}>Get Started</Text>
                                 <View style={styles.arrowIcon}>
-                                    <ArrowRight size={20} color={theme.colors.white} />
+                                    <ArrowRight size={20} color="#FFF" />
                                 </View>
                             </LinearGradient>
                         </TouchableOpacity>
                     </Animated.View>
 
-                    <TouchableOpacity
-                        onPress={() => navigation.navigate('SignUp')}
-                        style={styles.secondaryButton}
-                    >
+                    <TouchableOpacity onPress={() => navigation.navigate('SignUp')} style={styles.secondaryButton}>
                         <Text style={styles.secondaryButtonText}>
-                            Don't have an account? <Text style={styles.signUpHighlight}>Sign Up</Text>
+                            Don't have an account? <Text style={[styles.signUpHighlight, { color: theme.colors.primary }]}>Sign Up</Text>
                         </Text>
                     </TouchableOpacity>
                 </View>
@@ -201,125 +188,33 @@ const WelcomeScreen = ({ navigation }) => {
 };
 
 const styles = StyleSheet.create({
-    container: {
-        flex: 1,
-    },
-    blob: {
-        position: 'absolute',
-    },
-    safeArea: {
-        flex: 1,
-    },
-    topContent: {
-        flex: 1,
-        alignItems: 'center',
-        paddingTop: height * 0.08,
-    },
-    logoWrapper: {
-        marginBottom: theme.spacing.lg,
-    },
+    container: { flex: 1 },
+    blob: { position: 'absolute' },
+    safeArea: { flex: 1 },
+    topContent: { flex: 1, alignItems: 'center', paddingTop: height * 0.08 },
+    logoWrapper: { marginBottom: 20 },
     iconCircle: {
-        width: 140,
-        height: 140,
-        borderRadius: 70,
-        backgroundColor: theme.colors.white,
-        justifyContent: 'center',
-        alignItems: 'center',
-        ...theme.shadows.medium,
+        width: 140, height: 140, borderRadius: 70,
+        justifyContent: 'center', alignItems: 'center',
+        elevation: 10, shadowColor: '#000', shadowOpacity: 0.1, shadowRadius: 20,
     },
-    textWrapper: {
-        alignItems: 'center',
-        marginBottom: theme.spacing.xl,
-    },
-    title: {
-        fontSize: 48,
-        fontWeight: '900',
-        color: theme.colors.text,
-        letterSpacing: -1,
-    },
-    subtitle: {
-        fontSize: 18,
-        fontWeight: '600',
-        color: theme.colors.primary,
-        marginTop: 4,
-    },
-    featuresContainer: {
-        flexDirection: 'row',
-        justifyContent: 'center',
-        width: '100%',
-        paddingHorizontal: theme.spacing.lg,
-        marginTop: theme.spacing.lg,
-    },
-    featureItem: {
-        alignItems: 'center',
-        width: width * 0.28,
-        marginHorizontal: theme.spacing.xs,
-    },
-    featureIconContainer: {
-        width: 48,
-        height: 48,
-        borderRadius: 16,
-        backgroundColor: 'rgba(94, 96, 206, 0.12)',
-        justifyContent: 'center',
-        alignItems: 'center',
-        marginBottom: theme.spacing.sm,
-    },
-    featureText: {
-        fontSize: 12,
-        fontWeight: '700',
-        color: theme.colors.text,
-        textAlign: 'center',
-    },
-    bottomContent: {
-        paddingHorizontal: theme.spacing.xl,
-        paddingBottom: theme.spacing.xl,
-    },
-    description: {
-        fontSize: 15,
-        color: theme.colors.textSecondary,
-        textAlign: 'center',
-        lineHeight: 22,
-        marginBottom: theme.spacing.xl,
-    },
-    buttonWrapper: {
-        width: '100%',
-    },
-    mainButton: {
-        width: '100%',
-        height: 64,
-        borderRadius: 20,
-        ...theme.shadows.medium,
-    },
-    gradientButton: {
-        flex: 1,
-        borderRadius: 20,
-        flexDirection: 'row',
-        justifyContent: 'center',
-        alignItems: 'center',
-    },
-    buttonText: {
-        color: theme.colors.white,
-        fontSize: 18,
-        fontWeight: '800',
-        marginRight: theme.spacing.sm,
-    },
-    arrowIcon: {
-        backgroundColor: 'rgba(255,255,255,0.2)',
-        borderRadius: 10,
-        padding: 4,
-    },
-    secondaryButton: {
-        marginTop: theme.spacing.lg,
-        alignItems: 'center',
-    },
-    secondaryButtonText: {
-        fontSize: 14,
-        color: theme.colors.textSecondary,
-    },
-    signUpHighlight: {
-        color: theme.colors.primary,
-        fontWeight: '800',
-    },
+    textWrapper: { alignItems: 'center', marginBottom: 30 },
+    title: { fontSize: 48, fontWeight: '900', letterSpacing: -1 },
+    subtitle: { fontSize: 18, fontWeight: '600', marginTop: 4 },
+    featuresContainer: { flexDirection: 'row', justifyContent: 'center', width: '100%', paddingHorizontal: 20, marginTop: 20 },
+    featureItem: { alignItems: 'center', width: width * 0.28, marginHorizontal: 5 },
+    featureIconContainer: { width: 48, height: 48, borderRadius: 16, justifyContent: 'center', alignItems: 'center', marginBottom: 8 },
+    featureText: { fontSize: 12, fontWeight: '700', textAlign: 'center' },
+    bottomContent: { paddingHorizontal: 30, paddingBottom: 40 },
+    description: { fontSize: 15, color: '#94A3B8', textAlign: 'center', lineHeight: 22, marginBottom: 30 },
+    buttonWrapper: { width: '100%' },
+    mainButton: { width: '100%', height: 64, borderRadius: 20, elevation: 5, shadowColor: '#000', shadowOpacity: 0.2, shadowRadius: 10 },
+    gradientButton: { flex: 1, borderRadius: 20, flexDirection: 'row', justifyContent: 'center', alignItems: 'center' },
+    buttonText: { color: '#FFF', fontSize: 18, fontWeight: '800', marginRight: 10 },
+    arrowIcon: { backgroundColor: 'rgba(255,255,255,0.2)', borderRadius: 10, padding: 4 },
+    secondaryButton: { marginTop: 20, alignItems: 'center' },
+    secondaryButtonText: { fontSize: 14, color: '#94A3B8' },
+    signUpHighlight: { fontWeight: '800' },
 });
 
 export default WelcomeScreen;

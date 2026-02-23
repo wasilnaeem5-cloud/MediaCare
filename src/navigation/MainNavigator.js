@@ -1,6 +1,6 @@
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import * as Haptics from 'expo-haptics';
-import { Calendar, FileText, Home, User } from 'lucide-react-native';
+import { Calendar, FileText, Home, Pill, User } from 'lucide-react-native';
 import { useEffect } from 'react';
 import Animated, {
     useAnimatedStyle,
@@ -8,11 +8,12 @@ import Animated, {
     withSequence,
     withSpring
 } from 'react-native-reanimated';
-import { theme } from '../utils/theme';
+import { useTheme } from '../utils/ThemeContext';
 
 import AppointmentsScreen from '../screens/AppointmentsScreen';
 import DashboardScreen from '../screens/DashboardScreen';
 import MedicalRecordsScreen from '../screens/MedicalRecordsScreen';
+import MedicationScreen from '../screens/MedicationScreen';
 import ProfileSettingScreen from '../screens/ProfileSettingScreen';
 
 const Tab = createBottomTabNavigator();
@@ -42,6 +43,8 @@ const AnimatedTabIcon = ({ Icon, focused, color, size }) => {
 };
 
 const MainNavigator = () => {
+    const { theme } = useTheme();
+
     return (
         <Tab.Navigator
             screenOptions={({ route }) => ({
@@ -51,6 +54,7 @@ const MainNavigator = () => {
                     if (route.name === 'Home') Icon = Home;
                     else if (route.name === 'Appointments') Icon = Calendar;
                     else if (route.name === 'Records') Icon = FileText;
+                    else if (route.name === 'Meds') Icon = Pill;
                     else if (route.name === 'Profile') Icon = User;
 
                     return <AnimatedTabIcon Icon={Icon} focused={focused} color={color} size={size} />;
@@ -62,11 +66,11 @@ const MainNavigator = () => {
                     paddingTop: 10,
                     height: 75,
                     borderTopWidth: 0,
-                    backgroundColor: theme.colors.white,
+                    backgroundColor: theme.colors.surface, // Use surface for theme compatibility
                     ...theme.shadows.medium,
                     borderTopLeftRadius: 30,
                     borderTopRightRadius: 30,
-                    position: 'absolute', // Floating effect
+                    position: 'absolute',
                     bottom: 0,
                     left: 0,
                     right: 0,
@@ -81,6 +85,7 @@ const MainNavigator = () => {
             <Tab.Screen name="Home" component={DashboardScreen} />
             <Tab.Screen name="Appointments" component={AppointmentsScreen} />
             <Tab.Screen name="Records" component={MedicalRecordsScreen} />
+            <Tab.Screen name="Meds" component={MedicationScreen} />
             <Tab.Screen name="Profile" component={ProfileSettingScreen} />
         </Tab.Navigator>
     );
