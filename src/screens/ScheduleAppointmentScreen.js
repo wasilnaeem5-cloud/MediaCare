@@ -11,6 +11,7 @@ const doctors = [
     { id: '1', name: 'Dr. James Smith', specialty: 'Cardiologist', rating: '4.8', avatar: 'https://cdn-icons-png.flaticon.com/512/3774/3774299.png' },
     { id: '2', name: 'Dr. Sarah Wilson', specialty: 'Dermatologist', rating: '4.9', avatar: 'https://cdn-icons-png.flaticon.com/512/3304/3304567.png' },
     { id: '3', name: 'Dr. Robert Brown', specialty: 'General Physician', rating: '4.7', avatar: 'https://cdn-icons-png.flaticon.com/512/3774/3774299.png' },
+    { id: '4', name: 'Dr. Wasil Khan', specialty: 'Cardiologist', rating: '8.8', avatar: 'https://cdn-icons-png.flaticon.com/512/3774/3774299.png' },
 ];
 
 const timeSlots = [

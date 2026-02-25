@@ -106,7 +106,18 @@ const LoginScreen = ({ navigation }) => {
             }
         } catch (error) {
             triggerShake();
-            Alert.alert('Login Failed', error.response?.data?.message || 'Check your credentials.');
+            console.error('[Login Error Details]', error);
+
+            let message = 'Check your credentials.';
+            if (error.response) {
+                message = error.response.data?.message || message;
+            } else if (error.request) {
+                message = 'Network error: Cannot reach the server. Make sure your computer and phone are on the same Wi-Fi.';
+            } else {
+                message = error.message;
+            }
+
+            Alert.alert('Login Failed', message);
         } finally {
             setLoading(false);
         }

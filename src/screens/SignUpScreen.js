@@ -126,7 +126,20 @@ const SignupScreen = ({ navigation }) => {
                 await login(token, userData);
             }
         } catch (error) {
-            const message = error.response?.data?.message || 'Registration failed. Let\'s try that again.';
+            console.error('[Signup Error Details]', error);
+            let message = 'Registration failed. Let\'s try that again.';
+
+            if (error.response) {
+                // The server responded with a status code that falls out of the range of 2xx
+                message = error.response.data?.message || message;
+            } else if (error.request) {
+                // The request was made but no response was received
+                message = 'Network error: Cannot reach the server. Make sure your computer and phone are on the same Wi-Fi and firewall is off.';
+            } else {
+                // Something happened in setting up the request that triggered an Error
+                message = error.message;
+            }
+
             Alert.alert('Registration Issue', message);
         } finally {
             setLoading(false);
