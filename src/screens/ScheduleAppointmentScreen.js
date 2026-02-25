@@ -4,7 +4,7 @@ import { Alert, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'rea
 import { Calendar as CalendarPicker } from 'react-native-calendars';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import CustomButton from '../components/CustomButton';
-import api from '../services/api';
+import { appointmentService } from '../services/api';
 import { useTheme } from '../utils/ThemeContext';
 
 const doctors = [
@@ -32,7 +32,7 @@ const ScheduleAppointmentScreen = ({ navigation }) => {
 
         setLoading(true);
         try {
-            const response = await api.post('/appointments/book', {
+            const response = await appointmentService.book({
                 doctorName: selectedDoctor.name,
                 doctorSpec: selectedDoctor.specialty,
                 date: selectedDate,

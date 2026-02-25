@@ -25,7 +25,7 @@ import Animated, {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import CustomButton from '../components/CustomButton';
 import CustomInput from '../components/CustomInput';
-import api from '../services/api';
+import { authService } from '../services/api';
 import { useAuth } from '../utils/AuthContext';
 import { useTheme } from '../utils/ThemeContext';
 
@@ -96,7 +96,7 @@ const LoginScreen = ({ navigation }) => {
 
         setLoading(true);
         try {
-            const response = await api.post('/auth/login', {
+            const response = await authService.login({
                 email: email.trim().toLowerCase(),
                 password
             });

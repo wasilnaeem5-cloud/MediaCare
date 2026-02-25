@@ -33,7 +33,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import Card from '../components/Card';
 import Header from '../components/Header';
 import Skeleton from '../components/Skeleton';
-import api from '../services/api';
+import { appointmentService, insightService, medicationService } from '../services/api';
 import { useAuth } from '../utils/AuthContext';
 import { useTheme } from '../utils/ThemeContext';
 
@@ -91,32 +91,23 @@ const DashboardScreen = ({ navigation }) => {
 
     const fetchAllData = async () => {
         try {
-            // Fetch appointments and insights separately to avoid one failure blocking everything
-            const fetchApts = api.get('/appointments/upcoming').catch(err => {
-                console.warn('[Dashboard] Appointments failed:', err.message);
-                return { data: [] };
-            });
+            // Fetch appointments, insights, and meds using service layer
+            const [aptRes, insightRes, medRes] = await Promise.allSettled([
+                appointmentService.getUpcoming(),
+                insightService.getDashboard(),
+                medicationService.getAll()
+            ]);
 
-            const fetchInsights = api.get('/insights').catch(err => {
-                console.warn('[Dashboard] Insights failed:', err.message);
-                return { data: { healthScore: user?.healthScore || 75, insights: [] } };
-            });
-
-            const fetchMeds = api.get('/medications').catch(err => {
-                console.warn('[Dashboard] Meds failed:', err.message);
-                return { data: [] };
-            });
-
-            const [aptRes, insightRes, medRes] = await Promise.all([fetchApts, fetchInsights, fetchMeds]);
-
-            setDashboardData({
-                upcoming: aptRes.data[0] || null,
-                healthScore: insightRes.data.healthScore || user?.healthScore || 75,
-                insights: insightRes.data.insights || [],
-                meds: medRes.data || [],
+            const newData = {
+                upcoming: aptRes.status === 'fulfilled' ? aptRes.value.data[0] || null : null,
+                healthScore: insightRes.status === 'fulfilled' ? insightRes.value.data.healthScore || user?.healthScore || 75 : 75,
+                insights: insightRes.status === 'fulfilled' ? insightRes.value.data.insights || [] : [],
+                meds: medRes.status === 'fulfilled' ? medRes.value.data || [] : [],
                 vitals: user?.vitals || {}
-            });
-            console.log('[Dashboard] Data updated. Active Meds Count:', medRes.data?.length);
+            };
+
+            setDashboardData(newData);
+            console.log('[Dashboard] Dynamic data sync complete');
         } catch (error) {
             console.error('[Dashboard Component FATAL]', error);
         } finally {
@@ -130,6 +121,7 @@ const DashboardScreen = ({ navigation }) => {
             fetchAllData();
         }, [])
     );
+
 
     const onRefresh = () => {
         setRefreshing(true);

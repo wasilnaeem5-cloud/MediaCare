@@ -3,6 +3,9 @@ import { storage } from './storage';
 
 const AuthContext = createContext();
 
+// Global reference to logout function for non-component files (like api.js)
+let globalLogout = () => { };
+
 export const AuthProvider = ({ children }) => {
     const [userToken, setUserToken] = useState(null);
     const [user, setUser] = useState(null);
@@ -14,7 +17,6 @@ export const AuthProvider = ({ children }) => {
                 const token = await storage.getToken();
                 const storedUser = await storage.getUser();
 
-                // CRITICAL: Cleanup old mock tokens from previous developer versions
                 if (token === 'mock-jwt-token' || !token) {
                     await storage.clearAll();
                     setUserToken(null);
@@ -31,6 +33,7 @@ export const AuthProvider = ({ children }) => {
         };
 
         loadStoredData();
+        globalLogout = logout;
     }, []);
 
     const login = async (token, userData) => {
@@ -39,7 +42,7 @@ export const AuthProvider = ({ children }) => {
             await storage.saveUser(userData);
             setUserToken(token);
             setUser(userData);
-            console.log('[AuthContext] Login successful, state updated');
+            console.log('[AuthContext] Login successful');
         } catch (error) {
             console.error('[AuthContext] Login error', error);
         }
@@ -47,13 +50,10 @@ export const AuthProvider = ({ children }) => {
 
     const logout = async () => {
         try {
-            // Update state first for instant UI response
             setUserToken(null);
             setUser(null);
-
-            // Then clear storage in background
             await storage.clearAll();
-            console.log('[AuthContext] Logout successful, state and storage cleared');
+            console.log('[AuthContext] Session cleared');
         } catch (error) {
             console.error('[AuthContext] Logout error', error);
         }
@@ -64,7 +64,6 @@ export const AuthProvider = ({ children }) => {
             const updatedUser = { ...user, ...newUserData };
             await storage.saveUser(updatedUser);
             setUser(updatedUser);
-            console.log('[AuthContext] User profile updated globally');
         } catch (error) {
             console.error('[AuthContext] Update user error', error);
         }
@@ -77,4 +76,6 @@ export const AuthProvider = ({ children }) => {
     );
 };
 
+export const logoutGlobally = () => globalLogout();
 export const useAuth = () => useContext(AuthContext);
+

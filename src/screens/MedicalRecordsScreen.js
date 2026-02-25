@@ -28,7 +28,7 @@ import Card from '../components/Card';
 import CustomButton from '../components/CustomButton';
 import Header from '../components/Header';
 import Skeleton from '../components/Skeleton';
-import api from '../services/api';
+import api, { recordService } from '../services/api';
 import { useAuth } from '../utils/AuthContext';
 import { useTheme } from '../utils/ThemeContext';
 
@@ -64,7 +64,7 @@ const MedicalRecordsScreen = () => {
     const fetchRecords = async (isRefreshing = false) => {
         try {
             if (!isRefreshing) setLoading(true);
-            const response = await api.get('/records');
+            const response = await recordService.getAll();
             setRecords(response.data || []);
         } catch (error) {
             console.error('[Records Error]', error);
@@ -93,7 +93,7 @@ const MedicalRecordsScreen = () => {
 
         setActionLoading(true);
         try {
-            await api.post('/records', newRecord);
+            await recordService.add(newRecord);
             Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
             setShowAddModal(false);
             setNewRecord({
@@ -129,6 +129,7 @@ const MedicalRecordsScreen = () => {
             }
         ]);
     };
+
 
     const filteredRecords = records.filter(r =>
         r.title.toLowerCase().includes(searchQuery.toLowerCase()) ||

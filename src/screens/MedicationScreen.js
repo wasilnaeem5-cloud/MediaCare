@@ -21,7 +21,7 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Skeleton from '../components/Skeleton';
-import api from '../services/api';
+import api, { medicationService } from '../services/api';
 import { useTheme } from '../utils/ThemeContext';
 
 const { width } = Dimensions.get('window');
@@ -34,7 +34,7 @@ const MedicationScreen = ({ navigation }) => {
 
     const fetchMeds = async () => {
         try {
-            const response = await api.get('/medications');
+            const response = await medicationService.getAll();
             setMeds(response.data);
         } catch (error) {
             console.error('[Meds Error]', error);
@@ -53,7 +53,7 @@ const MedicationScreen = ({ navigation }) => {
         Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
         setLoggingId(id);
         try {
-            await api.patch(`/medications/${id}/log`);
+            await medicationService.updateAdherence(id, { date: new Date().toISOString().split('T')[0], status: 'Taken' });
             fetchMeds();
             Alert.alert('Done!', "Medication logged for today. You're doing great! 🌟");
         } catch (error) {
@@ -62,6 +62,7 @@ const MedicationScreen = ({ navigation }) => {
             setLoggingId(null);
         }
     };
+
 
     const handleDelete = (id) => {
         Alert.alert('Remove?', 'Stop tracking this medication?', [

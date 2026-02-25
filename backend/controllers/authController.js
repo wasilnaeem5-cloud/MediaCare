@@ -65,6 +65,8 @@ const signup = async (req, res) => {
             email: savedUser.email,
             phone: savedUser.phone,
             role: savedUser.role,
+            healthScore: savedUser.healthScore,
+            vitals: savedUser.vitals,
             token: token,
         });
 
@@ -104,6 +106,8 @@ const login = async (req, res) => {
                 email: user.email,
                 phone: user.phone,
                 role: user.role,
+                healthScore: user.healthScore,
+                vitals: user.vitals,
                 token: generateToken(user._id),
             });
         } else {

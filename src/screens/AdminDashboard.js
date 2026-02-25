@@ -18,7 +18,7 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Card from '../components/Card';
-import api from '../services/api';
+import { adminService } from '../services/api';
 import { useAuth } from '../utils/AuthContext';
 import { useTheme } from '../utils/ThemeContext';
 
@@ -30,7 +30,7 @@ const AdminDashboard = () => {
 
     const fetchStats = async () => {
         try {
-            const response = await api.get('/admin/stats');
+            const response = await adminService.getStats();
             setStats(response.data);
         } catch (error) {
             console.error('[Admin Error]', error);
@@ -38,6 +38,7 @@ const AdminDashboard = () => {
             setLoading(false);
         }
     };
+
 
     useEffect(() => {
         fetchStats();

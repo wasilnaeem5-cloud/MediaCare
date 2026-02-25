@@ -15,7 +15,7 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import CustomButton from '../components/CustomButton';
-import api from '../services/api';
+import { medicationService } from '../services/api';
 import { useTheme } from '../utils/ThemeContext';
 
 const AddMedicationScreen = ({ navigation }) => {
@@ -39,7 +39,7 @@ const AddMedicationScreen = ({ navigation }) => {
 
         setLoading(true);
         try {
-            await api.post('/medications', form);
+            await medicationService.add(form);
             Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
             Alert.alert('Success', 'Medication added successfully! 💊', [
                 { text: 'OK', onPress: () => navigation.goBack() }

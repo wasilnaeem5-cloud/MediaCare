@@ -22,7 +22,7 @@ import Animated, {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import CustomButton from '../components/CustomButton';
 import CustomInput from '../components/CustomInput';
-import api from '../services/api';
+import { authService } from '../services/api';
 import { useAuth } from '../utils/AuthContext';
 import { theme } from '../utils/theme';
 
@@ -113,7 +113,7 @@ const SignupScreen = ({ navigation }) => {
 
         setLoading(true);
         try {
-            const response = await api.post('/auth/signup', {
+            const response = await authService.signup({
                 name: name.trim(),
                 email: email.trim().toLowerCase(),
                 phone: phone.trim(),

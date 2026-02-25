@@ -18,7 +18,7 @@ import Card from '../components/Card';
 import CustomButton from '../components/CustomButton';
 import Header from '../components/Header';
 import Skeleton from '../components/Skeleton';
-import api from '../services/api';
+import api, { appointmentService } from '../services/api';
 import { useTheme } from '../utils/ThemeContext';
 
 const timeSlots = [
@@ -41,8 +41,9 @@ const AppointmentsScreen = ({ navigation }) => {
   const fetchAppointments = async (isRefreshing = false) => {
     try {
       if (!isRefreshing) setLoading(true);
-      const endpoint = activeTab === 'Upcoming' ? '/appointments/upcoming' : '/appointments/history';
-      const response = await api.get(endpoint);
+      const response = activeTab === 'Upcoming'
+        ? await appointmentService.getUpcoming()
+        : await appointmentService.getHistory();
       setAppointments(response.data || []);
     } catch (error) {
       setAppointments([]);
@@ -72,6 +73,7 @@ const AppointmentsScreen = ({ navigation }) => {
         onPress: async () => {
           try {
             setActionLoading(true);
+            // Updating to use service and specific endpoint if needed, but keeping it general
             await api.patch(`/appointments/${id}/cancel`);
             fetchAppointments();
           } catch (error) {
@@ -94,7 +96,7 @@ const AppointmentsScreen = ({ navigation }) => {
   const handleReschedule = async () => {
     try {
       setActionLoading(true);
-      await api.patch(`/appointments/${selectedApt._id}/reschedule`, { date: newDate, time: newTime });
+      await appointmentService.reschedule(selectedApt._id, { date: newDate, time: newTime });
       setShowReschedule(false);
       fetchAppointments();
     } catch (error) {
@@ -103,6 +105,7 @@ const AppointmentsScreen = ({ navigation }) => {
       setActionLoading(false);
     }
   };
+
 
   const StatusBadge = ({ status }) => {
     const colors = {
