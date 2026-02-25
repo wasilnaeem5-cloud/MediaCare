@@ -10,13 +10,7 @@ const path = require('path');
 dotenv.config({ path: path.join(__dirname, '.env') });
 
 // 2. Initial Logging
-console.log('--- MediCare Backend: Audit Mode ---');
-console.log('Environment:', process.env.NODE_ENV || 'production');
-
-// 3. Disable mongoose buffering
-// This ensures that queries fail if the database isn't connected yet,
-// preventing "hanging" behavior.
-mongoose.set('bufferCommands', false);
+console.log(`⚡ MediCare Backend | Mode: ${process.env.NODE_ENV || 'production'}`);
 
 const app = express();
 
@@ -52,23 +46,15 @@ const startServer = async () => {
         // Connect to MongoDB
         await connectDB();
 
-        // Audit check after connection
-        console.log('--- POST-CONNECTION AUDIT ---');
-        console.log('Active DB Name:', mongoose.connection.name);
-        console.log('Ready State:', mongoose.connection.readyState);
-
         const PORT = process.env.PORT || 5000;
 
         app.listen(PORT, () => {
-            console.log('---------------------------------------------');
             console.log(`🚀 SERVER RUNNING ON PORT ${PORT}`);
-            console.log(`📡 URL: http://localhost:${PORT}`);
-            console.log(`📂 DB: ${mongoose.connection.name}`);
+            console.log(`📡 Health Check: http://localhost:${PORT}/`);
             console.log('---------------------------------------------');
         });
     } catch (error) {
-        console.error('❌ Server failed to start due to database issues.');
-        console.error('Stack Trace:', error.stack);
+        console.error('❌ Server failed to start:', error.message);
         process.exit(1);
     }
 };

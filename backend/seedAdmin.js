@@ -1,14 +1,14 @@
 const mongoose = require('mongoose');
 const dotenv = require('dotenv');
 const User = require('./models/User'); // Path adjusted for being inside /backend
+const connectDB = require('./config/db');
 const path = require('path');
 
 dotenv.config({ path: path.join(__dirname, '.env') });
 
 const seedAdmin = async () => {
     try {
-        await mongoose.connect(process.env.MONGO_URI);
-        console.log('Connected to DB...');
+        await connectDB();
 
         const adminExists = await User.findOne({ email: 'admin@medicare.com' });
         if (adminExists) {

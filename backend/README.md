@@ -6,7 +6,7 @@ This is the production-ready Node.js/Express backend for the MediCare app.
 
 ### Prerequisites
 - Node.js installed
-- Local MongoDB running on `mongodb://127.0.0.1:27017`
+- MongoDB Atlas cluster (Cloud Database)
 
 ### Installation
 1. Navigate to the backend folder:
@@ -18,7 +18,7 @@ This is the production-ready Node.js/Express backend for the MediCare app.
    npm install
    ```
 3. Set up environment variables:
-   Check the `.env` file (pre-configured for you).
+   Create a `.env` file in the `backend` directory based on `.env.example` and add your MongoDB Atlas `MONGO_URI`.
 4. Run the server:
    ```bash
    npm start
